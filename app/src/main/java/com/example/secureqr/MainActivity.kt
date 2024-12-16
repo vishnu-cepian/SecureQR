@@ -1,6 +1,7 @@
 package com.example.secureqr
 
 import android.Manifest
+import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -40,6 +41,9 @@ class MainActivity : ComponentActivity() {
                 Toast.makeText(this, "Scan cancelled", Toast.LENGTH_SHORT).show()
             } else {
                 // Handle the QR code content (e.g., sending to backend for verification)
+                val intent = Intent(this,ResultActivity::class.java)
+                intent.putExtra("SCANNED_RESULT", scanResult.contents)
+                startActivity(intent)
                 Toast.makeText(this, "Scanned: ${scanResult.contents}", Toast.LENGTH_LONG).show()
                 // You can send scanResult.contents to your API for further verification
             }
@@ -125,3 +129,4 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
+
