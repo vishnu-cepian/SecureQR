@@ -21,7 +21,7 @@ import com.google.zxing.integration.android.IntentIntegrator
 import android.util.Log
 import android.content.pm.PackageManager
 import androidx.core.content.ContextCompat
-
+import java.security.MessageDigest
 
 class MainActivity : ComponentActivity() {
 
@@ -36,7 +36,11 @@ class MainActivity : ComponentActivity() {
 //       Log.d("QRScan", "Scan result format: ${scanResult.formatName}")
         if (scanResult != null) {
             Log.d("QRScan", "Scan result: ${scanResult.contents}")
-
+            val qrContent = scanResult.contents
+            val qrHash = hashQrContent(qrContent)
+            Toast.makeText(this, "QR Content Hashed", Toast.LENGTH_LONG).show()
+            Log.d("QRScan", "Original Content: $qrContent")
+            Log.d("QRScan", "SHA-256 Hash: $qrHash")
             if (scanResult.contents == null) {
                 Toast.makeText(this, "Scan cancelled", Toast.LENGTH_SHORT).show()
             } else {
@@ -127,6 +131,13 @@ class MainActivity : ComponentActivity() {
         SecureQrTheme {
             MainContent(innerPadding = PaddingValues())
         }
+    }
+
+    fun hashQrContent(content: String): String {
+        val bytes = content.toByteArray()
+        val digest = MessageDigest.getInstance("SHA-256")
+        val hashedBytes = digest.digest(bytes)
+        return hashedBytes.joinToString("") { "%02x".format(it) } // Convert bytes to hex
     }
 }
 
