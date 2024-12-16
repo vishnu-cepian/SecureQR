@@ -32,7 +32,7 @@ class MainActivity : ComponentActivity() {
 //        Log.d("QRScan", "Result Code: ${result.resultCode}")
 //        Log.d("QRScan", "Scan:$scanResult")
 //        Log.d("QRScan", "Scan result contents: ${scanResult.contents}")
-//        Log.d("QRScan", "Scan result format: ${scanResult.formatName}")
+//       Log.d("QRScan", "Scan result format: ${scanResult.formatName}")
         if (scanResult != null) {
             Log.d("QRScan", "Scan result: ${scanResult.contents}")
 
