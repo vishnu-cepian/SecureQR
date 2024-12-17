@@ -2,25 +2,31 @@ package com.example.secureqr
 
 import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Bundle
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
-import androidx.compose.material3.Text
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import com.example.secureqr.ui.theme.SecureQrTheme
 import com.google.zxing.integration.android.IntentIntegrator
-import android.util.Log
-import android.content.pm.PackageManager
-import androidx.core.content.ContextCompat
 import java.security.MessageDigest
 
 class MainActivity : ComponentActivity() {
@@ -100,7 +106,7 @@ class MainActivity : ComponentActivity() {
         integrator.setCameraId(0) // Use the default camera
         integrator.setBeepEnabled(true)
         integrator.setBarcodeImageEnabled(true)
-
+        integrator.setCaptureActivity(CaptureActivityPortrait::class.java)
         // Log to ensure QR scanner is launched
         Log.d("QRScan", "Launching QR scanner...")
 
