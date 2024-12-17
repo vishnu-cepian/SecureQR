@@ -72,13 +72,18 @@ fun ResultScreen(scannedContent: String) {
             text = annotatedString,
             style = androidx.compose.ui.text.TextStyle(fontSize = 16.sp),
             modifier = Modifier.padding(8.dp)
+                .clickable {
+                    if (scannedContent.startsWith("http")) {
+                        uriHandler.openUri(scannedContent)
+                    }
+                }
         )
 
         // Handle URL clicks manually
-        if (scannedContent.startsWith("http")) {
-            Modifier.clickable {
-                uriHandler.openUri(scannedContent)
-            }
-        }
+//        if (scannedContent.startsWith("http")) {
+//            Modifier.clickable {
+//                uriHandler.openUri(scannedContent)
+//            }
+//        }
     }
 }
