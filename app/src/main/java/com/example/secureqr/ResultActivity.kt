@@ -1,6 +1,7 @@
 package com.example.secureqr
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
@@ -24,11 +25,12 @@ class ResultActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val scannedContent = intent.getStringExtra("SCANNED_RESULT") ?: "No Data"
+        val hashContent = intent.getStringExtra("HASHED_CONTENT") ?: "No Data"
 
         setContent {
             SecureQrTheme {
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-                    ResultScreen(scannedContent = scannedContent)
+                    ResultScreen(scannedContent = scannedContent, hashContent = hashContent)
                 }
             }
         }
@@ -36,7 +38,7 @@ class ResultActivity : ComponentActivity() {
 }
 
 @Composable
-fun ResultScreen(scannedContent: String) {
+fun ResultScreen(scannedContent: String, hashContent: String) {
     val uriHandler = LocalUriHandler.current
 
     // Build AnnotatedString with LinkAnnotation for URLs
@@ -52,6 +54,8 @@ fun ResultScreen(scannedContent: String) {
         } else {
             append(scannedContent)
         }
+        append("\n\nSHA-256 HASHED CONTENT:\n\n")
+        append(hashContent)
     }
 
     Column(

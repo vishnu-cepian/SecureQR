@@ -47,6 +47,7 @@ class MainActivity : ComponentActivity() {
                 // Handle the QR code content (e.g., sending to backend for verification)
                 val intent = Intent(this,ResultActivity::class.java)
                 intent.putExtra("SCANNED_RESULT", scanResult.contents)
+                intent.putExtra("HASHED_CONTENT", qrHash)
                 startActivity(intent)
                 Toast.makeText(this, "Scanned: ${scanResult.contents}", Toast.LENGTH_LONG).show()
                 // You can send scanResult.contents to your API for further verification
