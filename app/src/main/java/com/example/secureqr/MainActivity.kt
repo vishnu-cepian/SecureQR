@@ -4,6 +4,8 @@ import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -28,6 +30,7 @@ import androidx.core.content.ContextCompat
 import com.example.secureqr.ui.theme.SecureQrTheme
 import com.google.zxing.integration.android.IntentIntegrator
 import java.security.MessageDigest
+
 
 class MainActivity : ComponentActivity() {
 
@@ -108,7 +111,9 @@ class MainActivity : ComponentActivity() {
         integrator.setBarcodeImageEnabled(true)
         integrator.setCaptureActivity(CaptureActivityPortrait::class.java)
         // Log to ensure QR scanner is launched
-        Log.d("QRScan", "Launching QR scanner...")
+        Handler(Looper.getMainLooper()).post { Log.d("TAG", "Your message") }
+
+        Log.e("QRScan", "Launching QR scanner...")
 
         val scanIntent = integrator.createScanIntent()
         scanResultLauncher.launch(scanIntent)

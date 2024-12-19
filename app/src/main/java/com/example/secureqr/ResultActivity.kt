@@ -43,7 +43,7 @@ fun ResultScreen(scannedContent: String, hashContent: String) {
     // Build AnnotatedString with LinkAnnotation for URLs
     val annotatedString = buildAnnotatedString {
         append("Scanned QR Content:\n\n")
-        if (scannedContent.startsWith("http")) {
+        if (scannedContent.startsWith("http") || scannedContent.startsWith("www" )) {
             // Annotate URL
             pushStringAnnotation(tag = "URL", annotation = scannedContent)
             pushStyle(SpanStyle(color = Color.Blue, textDecoration = TextDecoration.Underline))
@@ -76,7 +76,7 @@ fun ResultScreen(scannedContent: String, hashContent: String) {
             style = androidx.compose.ui.text.TextStyle(fontSize = 16.sp),
             modifier = Modifier.padding(8.dp)
                 .clickable {
-                    if (scannedContent.startsWith("http")) {
+                    if (scannedContent.startsWith("http" ) || scannedContent.startsWith("www" )) {
                         uriHandler.openUri(scannedContent)
                     }
                 }
