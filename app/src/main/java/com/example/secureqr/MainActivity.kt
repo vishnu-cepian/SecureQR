@@ -30,11 +30,12 @@ import androidx.core.content.ContextCompat
 import com.example.secureqr.ui.theme.SecureQrTheme
 import com.google.zxing.integration.android.IntentIntegrator
 import java.security.MessageDigest
+import androidx.compose.ui.platform.LocalContext
 
 
 class MainActivity : ComponentActivity() {
 
-    // Registering for the result of QR scan
+
     private val scanResultLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         val data = result.data
 //        Log.d("QRScan", "Barcode Format: ${result.data?.toString()}")
@@ -53,13 +54,12 @@ class MainActivity : ComponentActivity() {
             if (scanResult.contents == null) {
                 Toast.makeText(this, "Scan cancelled", Toast.LENGTH_SHORT).show()
             } else {
-                // Handle the QR code content (e.g., sending to backend for verification)
+                // Handle the QR code content (sending to ResultActivity)
                 val intent = Intent(this,ResultActivity::class.java)
-                intent.putExtra("SCANNED_RESULT", scanResult.contents)
+                intent.putExtra("SCANNED_RESULT", scanResult.contents) // adds data to intent
                 intent.putExtra("HASHED_CONTENT", qrHash)
-                startActivity(intent)
+                startActivity(intent)   //start resultActivity
                 Toast.makeText(this, "Scanned: ${scanResult.contents}", Toast.LENGTH_LONG).show()
-                // You can send scanResult.contents to your API for further verification
             }
         } else {
             Toast.makeText(this, "No scan result", Toast.LENGTH_SHORT).show()
@@ -67,11 +67,9 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    // Use ActivityResultContracts.RequestPermission to handle permission request
     private val requestPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted: Boolean ->
             if (isGranted) {
-                // Permission granted, you can now start scanning
                 startQRScanner()
             } else {
                 Toast.makeText(this, "Camera permission is required to scan QR codes.", Toast.LENGTH_SHORT).show()
@@ -91,17 +89,12 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        // Request camera permission if not granted
         if (shouldShowRequestPermissionRationale(Manifest.permission.CAMERA).not() &&
             ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
             requestPermissionLauncher.launch(Manifest.permission.CAMERA)
-        } else {
-            // If permission is already granted, start QR scanner
-            startQRScanner()
         }
     }
 
-    // Start QR scanning when button is clicked
     private fun startQRScanner() {
         val integrator = IntentIntegrator(this)
         integrator.setDesiredBarcodeFormats(IntentIntegrator.QR_CODE)
@@ -110,7 +103,7 @@ class MainActivity : ComponentActivity() {
         integrator.setBeepEnabled(true)
         integrator.setBarcodeImageEnabled(true)
         integrator.setCaptureActivity(CaptureActivityPortrait::class.java)
-        // Log to ensure QR scanner is launched
+
         Handler(Looper.getMainLooper()).post { Log.d("TAG", "Your message") }
 
         Log.e("QRScan", "Launching QR scanner...")
@@ -121,6 +114,7 @@ class MainActivity : ComponentActivity() {
 
     @Composable
     fun MainContent(innerPadding: PaddingValues) {
+        val activity = LocalContext.current as MainActivity
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -131,7 +125,13 @@ class MainActivity : ComponentActivity() {
             Text(text = "SecureQR : A Quantum Leap In Qr Code Security")
 
             Spacer(modifier = Modifier.height(20.dp))
-            Button(onClick = { startQRScanner() }) {
+            Button(onClick = {
+                if (ContextCompat.checkSelfPermission(activity, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
+                    activity.startQRScanner()
+                } else {
+                    Toast.makeText(activity, "Camera permission is required.", Toast.LENGTH_SHORT).show()
+                }
+            }) {
                 Text(text = "Scan QR Code")
             }
         }
@@ -145,7 +145,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    fun hashQrContent(content: String): String {
+    private fun hashQrContent(content: String): String {
         val bytes = content.toByteArray()
         val digest = MessageDigest.getInstance("SHA-256")
         val hashedBytes = digest.digest(bytes)

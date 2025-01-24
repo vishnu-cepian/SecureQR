@@ -75,4 +75,7 @@ dependencies {
     // Debug dependencies for Compose tooling
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+
+
+    implementation(libs.web3j)
 }

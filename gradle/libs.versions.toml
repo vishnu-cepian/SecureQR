@@ -10,6 +10,7 @@ activityCompose = "1.9.3"
 composeBom = "2024.12.01"
 zxing = "4.2.0"
 core = "3.4.0"
+web3j = "4.9.7"
 
 [libraries]
 # AndroidX Libraries
@@ -33,8 +34,11 @@ androidx-material3 = { group = "androidx.compose.material3", name = "material3" 
 # QR Code Scanning
 zxing-android-embedded = { group = "com.journeyapps", name = "zxing-android-embedded", version.ref = "zxing" }
 zxing-google-core = {group = "com.google.zxing", name = "core", version.ref = "core"}
+web3j = { group = "org.web3j", name = "core", version.ref = "web3j" }
+
 [plugins]
 # Plugin versions for Android Application and Kotlin
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+

@@ -40,7 +40,7 @@ class ResultActivity : ComponentActivity() {
 fun ResultScreen(scannedContent: String, hashContent: String) {
     val uriHandler = LocalUriHandler.current
 
-    // Build AnnotatedString with LinkAnnotation for URLs
+
     val annotatedString = buildAnnotatedString {
         append("Scanned QR Content:\n\n")
         if (scannedContent.startsWith("http") || scannedContent.startsWith("www" )) {
@@ -48,8 +48,8 @@ fun ResultScreen(scannedContent: String, hashContent: String) {
             pushStringAnnotation(tag = "URL", annotation = scannedContent)
             pushStyle(SpanStyle(color = Color.Blue, textDecoration = TextDecoration.Underline))
             append(scannedContent)
-            pop() // Pop style
-            pop() // Pop annotation
+            pop()
+            pop()
         } else {
             append(scannedContent)
         }
@@ -70,7 +70,6 @@ fun ResultScreen(scannedContent: String, hashContent: String) {
             modifier = Modifier.padding(bottom = 10.dp)
         )
 
-        // Render the AnnotatedString and handle clicks manually
         Text(
             text = annotatedString,
             style = androidx.compose.ui.text.TextStyle(fontSize = 16.sp),
@@ -82,7 +81,7 @@ fun ResultScreen(scannedContent: String, hashContent: String) {
                 }
         )
 
-        // Handle URL clicks manually
+
 //        if (scannedContent.startsWith("http")) {
 //            Modifier.clickable {
 //                uriHandler.openUri(scannedContent)
