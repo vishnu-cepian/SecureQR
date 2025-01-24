@@ -1,6 +1,7 @@
 package com.example.secureqr
 
 import android.Manifest
+import android.app.Activity
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
@@ -35,46 +36,74 @@ import androidx.compose.ui.platform.LocalContext
 
 class MainActivity : ComponentActivity() {
 
+    private val blockchainHelper = BlockchainHelper(this)
 
     private val scanResultLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        val data = result.data
+        val rc = result.resultCode
+        val ac = Activity.RESULT_OK
+        if (rc == ac) {
+            val data = result.data
 //        Log.d("QRScan", "Barcode Format: ${result.data?.toString()}")
-        val scanResult = IntentIntegrator.parseActivityResult(result.resultCode, data)
+            val scanResult = IntentIntegrator.parseActivityResult(result.resultCode, data)
 //        Log.d("QRScan", "Result Code: ${result.resultCode}")
 //        Log.d("QRScan", "Scan:$scanResult")
 //        Log.d("QRScan", "Scan result contents: ${scanResult.contents}")
 //       Log.d("QRScan", "Scan result format: ${scanResult.formatName}")
-        if (scanResult != null) {
-            Log.d("QRScan", "Scan result: ${scanResult.contents}")
-            val qrContent = scanResult.contents
-            val qrHash = hashQrContent(qrContent)
-            Toast.makeText(this, "QR Content Hashed", Toast.LENGTH_LONG).show()
-            Log.d("QRScan", "Original Content: $qrContent")
-            Log.d("QRScan", "SHA-256 Hash: $qrHash")
-            if (scanResult.contents == null) {
-                Toast.makeText(this, "Scan cancelled", Toast.LENGTH_SHORT).show()
+            if (scanResult != null) {
+                Log.d("QRScan", "Scan result: ${scanResult.contents}")
+                val qrContent = scanResult.contents
+                val qrHash = hashQrContent(qrContent)
+                Toast.makeText(this, "QR Content Hashed", Toast.LENGTH_LONG).show()
+                Log.d("QRScan", "Original Content: $qrContent")
+                Log.d("QRScan", "SHA-256 Hash: $qrHash")
+                if (scanResult.contents == null) {
+                    Toast.makeText(this, "Scan cancelled", Toast.LENGTH_SHORT).show()
+                } else {
+
+                    blockchainHelper.checkIfHashExists(qrHash) { isMalicious ->
+                        if (isMalicious) {
+                            Log.d("QRScan", "This QR code is malicious.")
+                            Toast.makeText(this, "Malicious", Toast.LENGTH_SHORT).show()
+                            // Handle malicious QR code (e.g., alert user, log data, etc.)
+                        } else {
+                            Log.d("QRScan", "This QR code is benign.")
+                            Toast.makeText(this, "Benign", Toast.LENGTH_SHORT).show()
+                            // You can pass the benign hash to the machine learning part or store it for future checks
+                        }
+                    }
+
+
+                    // Handle the QR code content (sending to ResultActivity)
+                    val intent = Intent(this, ResultActivity::class.java)
+                    intent.putExtra("SCANNED_RESULT", scanResult.contents) // adds data to intent
+                    intent.putExtra("HASHED_CONTENT", qrHash)
+                    startActivity(intent)   //start resultActivity
+                    Toast.makeText(this, "Scanned: ${scanResult.contents}", Toast.LENGTH_LONG)
+                        .show()
+                }
             } else {
-                // Handle the QR code content (sending to ResultActivity)
-                val intent = Intent(this,ResultActivity::class.java)
-                intent.putExtra("SCANNED_RESULT", scanResult.contents) // adds data to intent
-                intent.putExtra("HASHED_CONTENT", qrHash)
-                startActivity(intent)   //start resultActivity
-                Toast.makeText(this, "Scanned: ${scanResult.contents}", Toast.LENGTH_LONG).show()
+                Toast.makeText(this, "No scan result", Toast.LENGTH_SHORT).show()
+                Log.d("QRScan", "No scan result")
             }
+
         } else {
-            Toast.makeText(this, "No scan result", Toast.LENGTH_SHORT).show()
-            Log.d("QRScan", "No scan result")
+            showError("QR scan was canceled.")
         }
     }
 
-    private val requestPermissionLauncher =
-        registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted: Boolean ->
-            if (isGranted) {
-                startQRScanner()
-            } else {
-                Toast.makeText(this, "Camera permission is required to scan QR codes.", Toast.LENGTH_SHORT).show()
+
+        private val requestPermissionLauncher =
+            registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted: Boolean ->
+                if (isGranted) {
+                    startQRScanner()
+                } else {
+                    Toast.makeText(
+                        this,
+                        "Camera permission is required to scan QR codes.",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
             }
-        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -150,6 +179,9 @@ class MainActivity : ComponentActivity() {
         val digest = MessageDigest.getInstance("SHA-256")
         val hashedBytes = digest.digest(bytes)
         return hashedBytes.joinToString("") { "%02x".format(it) } // Convert bytes to hex
+    }
+    private fun showError(message: String) {
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
     }
 }
 
