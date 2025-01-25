@@ -53,21 +53,29 @@ class MainActivity : ComponentActivity() {
                 Log.d("QRScan", "Scan result: ${scanResult.contents}")
                 val qrContent = scanResult.contents
                 val qrHash = hashQrContent(qrContent)
-                Toast.makeText(this, "QR Content Hashed", Toast.LENGTH_LONG).show()
+//                Toast.makeText(this, "QR Content Hashed", Toast.LENGTH_LONG).show()
                 Log.d("QRScan", "Original Content: $qrContent")
                 Log.d("QRScan", "SHA-256 Hash: $qrHash")
                 if (scanResult.contents == null) {
-                    Toast.makeText(this, "Scan cancelled", Toast.LENGTH_SHORT).show()
+                    System.out.println("scan cancelled")
+//                    Toast.makeText(this, "Scan cancelled", Toast.LENGTH_SHORT).show()
                 } else {
 
                     blockchainHelper.checkIfHashExists(qrHash) { isMalicious ->
                         if (isMalicious) {
-                            Log.d("QRScan", "This QR code is malicious.")
-                            Toast.makeText(this, "Malicious", Toast.LENGTH_SHORT).show()
+                            System.out.println("This QR code is malicious.")
+//                            Toast.makeText(this, "Malicious", Toast.LENGTH_SHORT).show()
                             // Handle malicious QR code (e.g., alert user, log data, etc.)
                         } else {
-                            Log.d("QRScan", "This QR code is benign.")
-                            Toast.makeText(this, "Benign", Toast.LENGTH_SHORT).show()
+                            System.out.println("This QR code is benign.")
+                            blockchainHelper.addHashToBlockchain(qrHash) { success ->
+                                if (success) {
+                                    System.out.println("Hash added to blockchain successfully.")
+                                } else {
+                                    System.out.println("Failed to add hash to blockchain.")
+                                }
+                            }
+//                            Toast.makeText(this, "Benign", Toast.LENGTH_SHORT).show()
                             // You can pass the benign hash to the machine learning part or store it for future checks
                         }
                     }
@@ -78,11 +86,11 @@ class MainActivity : ComponentActivity() {
                     intent.putExtra("SCANNED_RESULT", scanResult.contents) // adds data to intent
                     intent.putExtra("HASHED_CONTENT", qrHash)
                     startActivity(intent)   //start resultActivity
-                    Toast.makeText(this, "Scanned: ${scanResult.contents}", Toast.LENGTH_LONG)
-                        .show()
+//                    Toast.makeText(this, "Scanned: ${scanResult.contents}", Toast.LENGTH_LONG)
+//                        .show()
                 }
             } else {
-                Toast.makeText(this, "No scan result", Toast.LENGTH_SHORT).show()
+//                Toast.makeText(this, "No scan result", Toast.LENGTH_SHORT).show()
                 Log.d("QRScan", "No scan result")
             }
 
@@ -97,16 +105,18 @@ class MainActivity : ComponentActivity() {
                 if (isGranted) {
                     startQRScanner()
                 } else {
-                    Toast.makeText(
-                        this,
-                        "Camera permission is required to scan QR codes.",
-                        Toast.LENGTH_SHORT
-                    ).show()
+//                    Toast.makeText(
+//                        this,
+//                        "Camera permission is required to scan QR codes.",
+//                        Toast.LENGTH_SHORT
+//                    ).show()
+                    System.out.println("camera persmission required")
                 }
             }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        Log.d("DebugTest", "Logging test in onCreate")
         setContent {
             SecureQrTheme {
                 Scaffold(
@@ -158,7 +168,8 @@ class MainActivity : ComponentActivity() {
                 if (ContextCompat.checkSelfPermission(activity, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
                     activity.startQRScanner()
                 } else {
-                    Toast.makeText(activity, "Camera permission is required.", Toast.LENGTH_SHORT).show()
+//                    Toast.makeText(activity, "Camera permission is required.", Toast.LENGTH_SHORT).show()
+                System.out.println("camera permission required")
                 }
             }) {
                 Text(text = "Scan QR Code")
@@ -181,7 +192,7 @@ class MainActivity : ComponentActivity() {
         return hashedBytes.joinToString("") { "%02x".format(it) } // Convert bytes to hex
     }
     private fun showError(message: String) {
-        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+//        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
     }
 }
 
