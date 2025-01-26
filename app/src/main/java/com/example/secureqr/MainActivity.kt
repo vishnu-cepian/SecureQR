@@ -61,14 +61,15 @@ class MainActivity : ComponentActivity() {
 //                    Toast.makeText(this, "Scan cancelled", Toast.LENGTH_SHORT).show()
                 } else {
 
-                    blockchainHelper.checkIfHashExists(qrHash) { isBenign ->
-                        if (isBenign) {
-                            System.out.println("This QR code is benign.")
+                    blockchainHelper.checkIfHashExists(qrHash) { isMalicious ->
+                        if (isMalicious) {
+                            System.out.println("This QR code is Malicious.")
 //                            Toast.makeText(this, "Malicious", Toast.LENGTH_SHORT).show()
                             // Handle malicious QR code (e.g., alert user, log data, etc.)
                         } else {
-                            //  !!!! RUN API CHECK THEN ML CHECK THEN IF SECURE SAVE TO BLOCKCHAIN !!!
-                            // until those steps just log malicious
+                            //  !!!! RUN API CHECK THEN ML CHECK THEN IF NOT SECURE SAVE TO BLOCKCHAIN !!!
+                            // until those steps just log benign
+
                             checkDomainReputation(qrContent) {result ->
                                 println(result)
                                 val regex = """Reputation Score: (\d+)""".toRegex()
@@ -77,11 +78,24 @@ class MainActivity : ComponentActivity() {
                                 if (matchResult != null) {
                                     val score = matchResult.groupValues[1] // Extract the captured group
                                     println("Extracted Reputation Score: $score")
+
+                                    val reputationScore = score.toIntOrNull() // Safely convert to an integer
+
+                                    if (reputationScore != null) { // Check if conversion was successful
+                                        if (reputationScore < 100) {
+                                            println("The website is potentially malicious. Reputation Score: $reputationScore")
+                                            handleMaliciousHash(qrHash)
+                                        } else {
+                                            println("The website is safe. Reputation Score: $reputationScore")
+                                        }
+                                    } else {
+                                        println("Error: Could not extract a valid reputation score.")
+                                    }
                                 } else {
                                     println("Reputation score not found in the message.")
                                 }
                             }
-                            System.out.println("This QR code is Malicious.")
+                            System.out.println("This QR code is benign.")
 //                            blockchainHelper.addHashToBlockchain(qrHash) { success ->
 //                                if (success) {
 //                                    System.out.println("Hash added to blockchain successfully.")
@@ -93,7 +107,6 @@ class MainActivity : ComponentActivity() {
                             // You can pass the benign hash to the machine learning part or store it for future checks
                         }
                     }
-
 
                     // Handle the QR code content (sending to ResultActivity)
                     val intent = Intent(this, ResultActivity::class.java)
@@ -113,8 +126,18 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun handleMaliciousHash(qrHash: String) {
+        blockchainHelper.addHashToBlockchain(qrHash) { success ->
+            if (success) {
+                System.out.println("Hash added to blockchain successfully.")
+            } else {
+                System.out.println("Failed to add hash to blockchain.")
+            }
+        }
+    }
 
-        private val requestPermissionLauncher =
+
+    private val requestPermissionLauncher =
             registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted: Boolean ->
                 if (isGranted) {
                     startQRScanner()

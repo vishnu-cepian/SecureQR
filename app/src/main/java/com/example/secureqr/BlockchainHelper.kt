@@ -26,10 +26,10 @@ init {
     connectToEthereum()
 }
     private val web3j: Web3j = Web3j.build(HttpService("https://sepolia.infura.io/v3/3764887512834ed9b5b729eaba91ee42"))
-    private val contractAddress = "0x3d95E7390ecE6d062e5047fd82d33D285797Ef3E"
+    private val contractAddress = "0xe469542Ca15A06D13597DA19a9EB15E3d97F8EF3"
     private val privateKey = "de849daa7b187f7ce7e15fa7d966211d66f6600e2f2756a3b15093871bdff76b"
 
-
+//    0x3d95E7390ecE6d062e5047fd82d33D285797Ef3E
 //    0xEfa9f16F650fC2a1e84B6c1fbca9ef799e2664Ad
     private fun loadContract(): QRHashRegistry {
         val credentials = Credentials.create(privateKey)
@@ -41,7 +41,7 @@ init {
 //            val balanceInWei = balanceResponse.balance
 //            System.out.println("Balance: ${balanceInWei}")
 //        } catch (e : Exception) {
-//            System.out.println("Eception: ${e.message}")
+//            System.out.println("Exception: ${e.message}")
 //        }
 
         val customGasProvider = object : ContractGasProvider {
@@ -93,9 +93,9 @@ init {
 //                    }
 //                }
                 println("${hashBytes32.value}")
-                val isBenign = contract.isHashBenign(hashBytes32.value).send()
-                System.out.println("isBenign: $isBenign")
-                callback(isBenign)
+                val isMalicious = contract.isHashMalicious(hashBytes32.value).send()
+                System.out.println("isMalicious: $isMalicious")
+                callback(isMalicious)
             } catch (e: Exception) {
                 System.out.println("Error checking hash: ${e.message}")
 //
