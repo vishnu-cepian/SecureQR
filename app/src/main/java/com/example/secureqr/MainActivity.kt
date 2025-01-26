@@ -61,20 +61,34 @@ class MainActivity : ComponentActivity() {
 //                    Toast.makeText(this, "Scan cancelled", Toast.LENGTH_SHORT).show()
                 } else {
 
-                    blockchainHelper.checkIfHashExists(qrHash) { isMalicious ->
-                        if (isMalicious) {
-                            System.out.println("This QR code is malicious.")
+                    blockchainHelper.checkIfHashExists(qrHash) { isBenign ->
+                        if (isBenign) {
+                            System.out.println("This QR code is benign.")
 //                            Toast.makeText(this, "Malicious", Toast.LENGTH_SHORT).show()
                             // Handle malicious QR code (e.g., alert user, log data, etc.)
                         } else {
-                            System.out.println("This QR code is benign.")
-                            blockchainHelper.addHashToBlockchain(qrHash) { success ->
-                                if (success) {
-                                    System.out.println("Hash added to blockchain successfully.")
+                            //  !!!! RUN API CHECK THEN ML CHECK THEN IF SECURE SAVE TO BLOCKCHAIN !!!
+                            // until those steps just log malicious
+                            checkDomainReputation(qrContent) {result ->
+                                println(result)
+                                val regex = """Reputation Score: (\d+)""".toRegex()
+                                val matchResult = regex.find(result)
+
+                                if (matchResult != null) {
+                                    val score = matchResult.groupValues[1] // Extract the captured group
+                                    println("Extracted Reputation Score: $score")
                                 } else {
-                                    System.out.println("Failed to add hash to blockchain.")
+                                    println("Reputation score not found in the message.")
                                 }
                             }
+                            System.out.println("This QR code is Malicious.")
+//                            blockchainHelper.addHashToBlockchain(qrHash) { success ->
+//                                if (success) {
+//                                    System.out.println("Hash added to blockchain successfully.")
+//                                } else {
+//                                    System.out.println("Failed to add hash to blockchain.")
+//                                }
+//                            }
 //                            Toast.makeText(this, "Benign", Toast.LENGTH_SHORT).show()
                             // You can pass the benign hash to the machine learning part or store it for future checks
                         }
