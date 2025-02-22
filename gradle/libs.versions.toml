@@ -11,6 +11,9 @@ composeBom = "2024.12.01"
 zxing = "4.2.0"
 core = "3.4.0"
 web3j = "4.9.7"
+navigationRuntimeAndroid = "2.9.0-alpha06"
+navigationRuntimeKtx = "2.8.7"
+navigationCompose = "2.8.7"
 
 [libraries]
 # AndroidX Libraries
@@ -35,6 +38,9 @@ androidx-material3 = { group = "androidx.compose.material3", name = "material3" 
 zxing-android-embedded = { group = "com.journeyapps", name = "zxing-android-embedded", version.ref = "zxing" }
 zxing-google-core = {group = "com.google.zxing", name = "core", version.ref = "core"}
 web3j = { group = "org.web3j", name = "core", version.ref = "web3j" }
+androidx-navigation-runtime-android = { group = "androidx.navigation", name = "navigation-runtime-android", version.ref = "navigationRuntimeAndroid" }
+androidx-navigation-runtime-ktx = { group = "androidx.navigation", name = "navigation-runtime-ktx", version.ref = "navigationRuntimeKtx" }
+androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
 
 [plugins]
 # Plugin versions for Android Application and Kotlin
