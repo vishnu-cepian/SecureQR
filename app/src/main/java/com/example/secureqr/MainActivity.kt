@@ -8,30 +8,24 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Button
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.example.secureqr.ui.theme.SecureQrTheme
 import com.google.zxing.integration.android.IntentIntegrator
 import java.security.MessageDigest
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
+import androidx.navigation.compose.*
 
 
 class MainActivity : ComponentActivity() {
@@ -39,9 +33,7 @@ class MainActivity : ComponentActivity() {
     private val blockchainHelper = BlockchainHelper(this)
 
     private val scanResultLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        val rc = result.resultCode
-        val ac = Activity.RESULT_OK
-        if (rc == ac) {
+        if (result.resultCode == Activity.RESULT_OK) {
             val data = result.data
 //        Log.d("QRScan", "Barcode Format: ${result.data?.toString()}")
             val scanResult = IntentIntegrator.parseActivityResult(result.resultCode, data)
@@ -156,12 +148,21 @@ class MainActivity : ComponentActivity() {
         Log.d("DebugTest", "Logging test in onCreate")
         setContent {
             SecureQrTheme {
-                Scaffold(
-                    modifier = Modifier.fillMaxSize(),
-                    content = { innerPadding ->
-                        MainContent(innerPadding = innerPadding)
+//                Scaffold(
+//                    modifier = Modifier.fillMaxSize(),
+//                    content = { innerPadding ->
+//                        MainContent(innerPadding = innerPadding)
+//                    }
+//                )
+                val navController = rememberNavController()
+                NavHost(navController, startDestination = "main") {
+                    composable("main") { MainContent(navController) }
+                    composable("business_service") { BusinessServiceScreen(navController) }
+                    composable("qr_scanner/{company}") { backStackEntry ->
+                        val company = backStackEntry.arguments?.getString("company") ?: "Unknown"
+                        QrScannerScreen(company)
                     }
-                )
+                }
             }
         }
 
@@ -189,12 +190,12 @@ class MainActivity : ComponentActivity() {
     }
 
     @Composable
-    fun MainContent(innerPadding: PaddingValues) {
+    fun MainContent(navController: NavController) {
         val activity = LocalContext.current as MainActivity
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding),
+                .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
@@ -211,16 +212,53 @@ class MainActivity : ComponentActivity() {
             }) {
                 Text(text = "Scan QR Code")
             }
+
+//            Spacer(modifier = Modifier.height(10.dp))
+
+            Button(
+                onClick = { navController.navigate("business_service") },
+                modifier = Modifier.padding(8.dp)
+            ) {
+                Text(text = "Business Service")
+            }
         }
     }
 
-    @Preview(showBackground = true)
     @Composable
-    fun DefaultPreview() {
-        SecureQrTheme {
-            MainContent(innerPadding = PaddingValues())
+    fun BusinessServiceScreen(navController: NavController) {
+        val companies = listOf("LuxuryBrand", "TechCorp", "FoodChain")
+
+        Column(
+            modifier = Modifier.fillMaxSize().padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text("Select a Company", fontSize = 20.sp, modifier = Modifier.padding(bottom = 16.dp))
+
+            companies.forEach { company ->
+                Button(
+                    onClick = { navController.navigate("qr_scanner/$company") },
+                    modifier = Modifier.fillMaxWidth().padding(8.dp)
+                ) {
+                    Text(company)
+                }
+            }
         }
     }
+
+    @Composable
+    fun QrScannerScreen(company: String) {
+        val activity = LocalContext.current as MainActivity
+        activity.startQRScanner()
+    }
+
+//    @Preview(showBackground = true)
+//    @Composable
+//    fun DefaultPreview() {
+//        SecureQrTheme {
+//            MainContent(innerPadding = PaddingValues())
+//        }
+//    }
 
     private fun hashQrContent(content: String): String {
         val bytes = content.toByteArray()
@@ -233,3 +271,47 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+
+//package com.example.secureqr
+//
+//import android.Manifest
+//import android.app.Activity
+//import android.content.Intent
+//import android.content.pm.PackageManagerT
+//            verticalArrangement = Arrangement.Center
+//        ) {
+//            Text("Select a Company", fontSize = 20.sp, modifier = Modifier.padding(bottom = 16.dp))
+//
+//            companies.forEach { company ->
+//                Button(
+//                    onClick = { navController.navigate("qr_scanner/$company") },
+//                    modifier = Modifier.fillMaxWidth().padding(8.dp)
+//                ) {
+//                    Text(company)
+//                }
+//            }
+//        }
+//    }
+//
+//    @Composable
+//    fun QrScannerScreen(company: String) {
+//        Column(
+//            modifier = Modifier.fillMaxSize().padding(16.dp),
+//            horizontalAlignment = Alignment.CenterHorizontally,
+//            verticalArrangement = Arrangement.Center
+//        ) {
+//            Text("Scanning QR Code for: $company", fontSize = 18.sp)
+//        }
+//    }
+//
+//    private fun hashQrContent(content: String): String {
+//        val digest = MessageDigest.getInstance("SHA-256")
+//        return digest.digest(content.toByteArray()).joinToString("") { "%02x".format(it) }
+//    }
+//
+//    private fun handleMaliciousHash(qrHash: String) {
+//        blockchainHelper.addHashToBlockchain(qrHash) { success ->
+//            println(if (success) "Hash added to blockchain successfully." else "Failed to add hash to blockchain.")
+//        }
+//    }
+//}
