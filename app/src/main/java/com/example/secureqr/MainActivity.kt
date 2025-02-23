@@ -11,6 +11,7 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
@@ -26,11 +27,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.compose.*
-
+import androidx.compose.material3.*
 
 class MainActivity : ComponentActivity() {
 
     private val blockchainHelper = BlockchainHelper(this)
+    private var selectedCompany: String? = null
 
     private val scanResultLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
@@ -41,18 +43,35 @@ class MainActivity : ComponentActivity() {
 //        Log.d("QRScan", "Scan:$scanResult")
 //        Log.d("QRScan", "Scan result contents: ${scanResult.contents}")
 //       Log.d("QRScan", "Scan result format: ${scanResult.formatName}")
-            if (scanResult != null) {
+            if (scanResult != null && scanResult.contents != null) {
                 Log.d("QRScan", "Scan result: ${scanResult.contents}")
                 val qrContent = scanResult.contents
                 val qrHash = hashQrContent(qrContent)
 //                Toast.makeText(this, "QR Content Hashed", Toast.LENGTH_LONG).show()
                 Log.d("QRScan", "Original Content: $qrContent")
                 Log.d("QRScan", "SHA-256 Hash: $qrHash")
-                if (scanResult.contents == null) {
-                    System.out.println("scan cancelled")
-//                    Toast.makeText(this, "Scan cancelled", Toast.LENGTH_SHORT).show()
-                } else {
 
+                val company = selectedCompany
+
+                println("----- ${selectedCompany} -----------")
+                if (company != null) {
+                    println("------------INSIDE PRODUCT---------------")
+                    blockchainHelper.isProductAuthentic(company, qrHash) { isAuthentic ->
+                        if(isAuthentic) {
+                            println("Product is authentic for $company")
+                        }
+                        else {
+                            println("Product is NoT authentic for $company")
+//                            blockchainHelper.addHashToBusinessServiceBlockchain(company , qrHash) { success ->
+//                                if (success) {
+//                                    System.out.println("Hash added to blockchain successfully.")
+//                                } else {
+//                                    System.out.println("Failed to add hash to blockchain.")
+//                                }
+//                            }
+                        }
+                    }
+                } else {
                     blockchainHelper.checkIfHashExists(qrHash) { isMalicious ->
                         if (isMalicious) {
                             System.out.println("This QR code is Malicious.")
@@ -173,6 +192,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun startQRScanner() {
+        selectedCompany = null
         val integrator = IntentIntegrator(this)
         integrator.setDesiredBarcodeFormats(IntentIntegrator.QR_CODE)
         integrator.setPrompt("Scan a QR code")
@@ -192,9 +212,11 @@ class MainActivity : ComponentActivity() {
     @Composable
     fun MainContent(navController: NavController) {
         val activity = LocalContext.current as MainActivity
+        val backgroundColor = MaterialTheme.colorScheme.background
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .background(backgroundColor)
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
@@ -224,9 +246,37 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+//    @Composable
+//    fun BusinessServiceScreen(navController: NavController) {
+//        val activity = LocalContext.current as MainActivity
+//
+//        val companies = listOf("LuxuryBrand", "TechCorp", "FoodChain")
+//
+//        Column(
+//            modifier = Modifier.fillMaxSize().padding(16.dp),
+//            horizontalAlignment = Alignment.CenterHorizontally,
+//            verticalArrangement = Arrangement.Center
+//        ) {
+//            Text("Select a Company", fontSize = 20.sp, modifier = Modifier.padding(bottom = 16.dp))
+//
+//            companies.forEach { company ->
+//                Button(
+//                    onClick = { activity.startBusinessQRScanner(company) },
+//                    modifier = Modifier.fillMaxWidth().padding(8.dp)
+//                ) {
+//                    Text(company)
+//                }
+//            }
+//        }
+//    }
+    @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     fun BusinessServiceScreen(navController: NavController) {
+        val activity = LocalContext.current as MainActivity
         val companies = listOf("LuxuryBrand", "TechCorp", "FoodChain")
+
+        var expanded by remember { mutableStateOf(false) }
+        var selectedCompany by remember { mutableStateOf(companies[0]) } // Default selection
 
         Column(
             modifier = Modifier.fillMaxSize().padding(16.dp),
@@ -235,15 +285,52 @@ class MainActivity : ComponentActivity() {
         ) {
             Text("Select a Company", fontSize = 20.sp, modifier = Modifier.padding(bottom = 16.dp))
 
-            companies.forEach { company ->
-                Button(
-                    onClick = { navController.navigate("qr_scanner/$company") },
-                    modifier = Modifier.fillMaxWidth().padding(8.dp)
+            Box(modifier = Modifier.wrapContentSize(Alignment.TopStart)) {
+                Button(onClick = { expanded = true }) {
+                    Text(selectedCompany)  // Show selected company name
+                }
+
+                DropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false }
                 ) {
-                    Text(company)
+                    companies.forEach { company ->
+                        DropdownMenuItem(
+                            text = { Text(company) },
+                            onClick = {
+                                selectedCompany = company
+                                expanded = false
+                            }
+                        )
+                    }
                 }
             }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Button(
+                onClick = { activity.startBusinessQRScanner(selectedCompany) },
+                modifier = Modifier.fillMaxWidth().padding(8.dp)
+            ) {
+                Text("Scan QR for $selectedCompany")
+            }
         }
+    }
+
+
+    fun startBusinessQRScanner(company: String) {
+        val integrator = IntentIntegrator(this)
+        integrator.setDesiredBarcodeFormats(IntentIntegrator.QR_CODE)
+        integrator.setPrompt("Scan a QR code for $company")
+        integrator.setCameraId(0)
+        integrator.setBeepEnabled(true)
+        integrator.setBarcodeImageEnabled(true)
+        integrator.setCaptureActivity(CaptureActivityPortrait::class.java)
+
+        selectedCompany = company
+
+        val scanIntent = integrator.createScanIntent()
+        scanResultLauncher.launch(scanIntent)
     }
 
     @Composable
