@@ -11,7 +11,6 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
@@ -28,6 +27,8 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.compose.*
 import androidx.compose.material3.*
+import okhttp3.OkHttpClient
+import okhttp3.Request
 
 class MainActivity : ComponentActivity() {
 
@@ -37,20 +38,16 @@ class MainActivity : ComponentActivity() {
     private val scanResultLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
             val data = result.data
-//        Log.d("QRScan", "Barcode Format: ${result.data?.toString()}")
+
             val scanResult = IntentIntegrator.parseActivityResult(result.resultCode, data)
-//        Log.d("QRScan", "Result Code: ${result.resultCode}")
-//        Log.d("QRScan", "Scan:$scanResult")
-//        Log.d("QRScan", "Scan result contents: ${scanResult.contents}")
-//       Log.d("QRScan", "Scan result format: ${scanResult.formatName}")
+
             if (scanResult != null && scanResult.contents != null) {
                 Log.d("QRScan", "Scan result: ${scanResult.contents}")
-                val qrContent = scanResult.contents
+                var qrContent = scanResult.contents
                 val qrHash = hashQrContent(qrContent)
-//                Toast.makeText(this, "QR Content Hashed", Toast.LENGTH_LONG).show()
+
                 Log.d("QRScan", "Original Content: $qrContent")
                 Log.d("QRScan", "SHA-256 Hash: $qrHash")
-
                 val company = selectedCompany
 
                 println("----- ${selectedCompany} -----------")
@@ -62,26 +59,19 @@ class MainActivity : ComponentActivity() {
                         }
                         else {
                             println("Product is NoT authentic for $company")
-//                            blockchainHelper.addHashToBusinessServiceBlockchain(company , qrHash) { success ->
-//                                if (success) {
-//                                    System.out.println("Hash added to blockchain successfully.")
-//                                } else {
-//                                    System.out.println("Failed to add hash to blockchain.")
-//                                }
-//                            }
                         }
                     }
                 } else {
                     blockchainHelper.checkIfHashExists(qrHash) { isMalicious ->
                         if (isMalicious) {
                             System.out.println("This QR code is Malicious.")
-//                            Toast.makeText(this, "Malicious", Toast.LENGTH_SHORT).show()
-                            // Handle malicious QR code (e.g., alert user, log data, etc.)
                         } else {
-                            //  !!!! RUN API CHECK THEN ML CHECK THEN IF NOT SECURE SAVE TO BLOCKCHAIN !!!
-                            // until those steps just log benign
+                            getFinalRedirectedUrl(qrContent) { finalUrl ->
+                                val resolvedUrl = finalUrl ?: qrContent
+                                println(resolvedUrl)
+                                //  !!!! RUN API CHECK THEN ML CHECK THEN IF NOT SECURE SAVE TO BLOCKCHAIN !!
 
-                            checkDomainReputation(qrContent) {result ->
+                            checkDomainReputation(resolvedUrl) {result ->
                                 println(result)
                                 val regex = """Reputation Score: (\d+)""".toRegex()
                                 val matchResult = regex.find(result)
@@ -93,7 +83,7 @@ class MainActivity : ComponentActivity() {
                                     val reputationScore = score.toIntOrNull() // Safely convert to an integer
 
                                     if (reputationScore != null) { // Check if conversion was successful
-                                        if (reputationScore < 100) {
+                                        if (reputationScore < 80) {
                                             println("The website is potentially malicious. Reputation Score: $reputationScore")
                                             handleMaliciousHash(qrHash)
                                         } else {
@@ -107,15 +97,7 @@ class MainActivity : ComponentActivity() {
                                 }
                             }
                             System.out.println("This QR code is benign.")
-//                            blockchainHelper.addHashToBlockchain(qrHash) { success ->
-//                                if (success) {
-//                                    System.out.println("Hash added to blockchain successfully.")
-//                                } else {
-//                                    System.out.println("Failed to add hash to blockchain.")
-//                                }
-//                            }
-//                            Toast.makeText(this, "Benign", Toast.LENGTH_SHORT).show()
-                            // You can pass the benign hash to the machine learning part or store it for future checks
+                            }
                         }
                     }
 
@@ -153,11 +135,6 @@ class MainActivity : ComponentActivity() {
                 if (isGranted) {
                     startQRScanner()
                 } else {
-//                    Toast.makeText(
-//                        this,
-//                        "Camera permission is required to scan QR codes.",
-//                        Toast.LENGTH_SHORT
-//                    ).show()
                     System.out.println("camera persmission required")
                 }
             }
@@ -167,20 +144,11 @@ class MainActivity : ComponentActivity() {
         Log.d("DebugTest", "Logging test in onCreate")
         setContent {
             SecureQrTheme {
-//                Scaffold(
-//                    modifier = Modifier.fillMaxSize(),
-//                    content = { innerPadding ->
-//                        MainContent(innerPadding = innerPadding)
-//                    }
-//                )
                 val navController = rememberNavController()
                 NavHost(navController, startDestination = "main") {
                     composable("main") { MainContent(navController) }
                     composable("business_service") { BusinessServiceScreen(navController) }
-                    composable("qr_scanner/{company}") { backStackEntry ->
-                        val company = backStackEntry.arguments?.getString("company") ?: "Unknown"
-                        QrScannerScreen(company)
-                    }
+
                 }
             }
         }
@@ -212,11 +180,9 @@ class MainActivity : ComponentActivity() {
     @Composable
     fun MainContent(navController: NavController) {
         val activity = LocalContext.current as MainActivity
-        val backgroundColor = MaterialTheme.colorScheme.background
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(backgroundColor)
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
@@ -235,8 +201,6 @@ class MainActivity : ComponentActivity() {
                 Text(text = "Scan QR Code")
             }
 
-//            Spacer(modifier = Modifier.height(10.dp))
-
             Button(
                 onClick = { navController.navigate("business_service") },
                 modifier = Modifier.padding(8.dp)
@@ -246,29 +210,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-//    @Composable
-//    fun BusinessServiceScreen(navController: NavController) {
-//        val activity = LocalContext.current as MainActivity
-//
-//        val companies = listOf("LuxuryBrand", "TechCorp", "FoodChain")
-//
-//        Column(
-//            modifier = Modifier.fillMaxSize().padding(16.dp),
-//            horizontalAlignment = Alignment.CenterHorizontally,
-//            verticalArrangement = Arrangement.Center
-//        ) {
-//            Text("Select a Company", fontSize = 20.sp, modifier = Modifier.padding(bottom = 16.dp))
-//
-//            companies.forEach { company ->
-//                Button(
-//                    onClick = { activity.startBusinessQRScanner(company) },
-//                    modifier = Modifier.fillMaxWidth().padding(8.dp)
-//                ) {
-//                    Text(company)
-//                }
-//            }
-//        }
-//    }
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     fun BusinessServiceScreen(navController: NavController) {
@@ -328,24 +269,11 @@ class MainActivity : ComponentActivity() {
         integrator.setCaptureActivity(CaptureActivityPortrait::class.java)
 
         selectedCompany = company
-
+  
         val scanIntent = integrator.createScanIntent()
         scanResultLauncher.launch(scanIntent)
     }
 
-    @Composable
-    fun QrScannerScreen(company: String) {
-        val activity = LocalContext.current as MainActivity
-        activity.startQRScanner()
-    }
-
-//    @Preview(showBackground = true)
-//    @Composable
-//    fun DefaultPreview() {
-//        SecureQrTheme {
-//            MainContent(innerPadding = PaddingValues())
-//        }
-//    }
 
     private fun hashQrContent(content: String): String {
         val bytes = content.toByteArray()
@@ -358,47 +286,32 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+fun getFinalRedirectedUrl(url: String, maxRedirects: Int = 5, callback: (String?) -> Unit) {
+    val client = OkHttpClient.Builder()
+        .followRedirects(false) // Manually handle redirects
+        .build()
 
-//package com.example.secureqr
-//
-//import android.Manifest
-//import android.app.Activity
-//import android.content.Intent
-//import android.content.pm.PackageManagerT
-//            verticalArrangement = Arrangement.Center
-//        ) {
-//            Text("Select a Company", fontSize = 20.sp, modifier = Modifier.padding(bottom = 16.dp))
-//
-//            companies.forEach { company ->
-//                Button(
-//                    onClick = { navController.navigate("qr_scanner/$company") },
-//                    modifier = Modifier.fillMaxWidth().padding(8.dp)
-//                ) {
-//                    Text(company)
-//                }
-//            }
-//        }
-//    }
-//
-//    @Composable
-//    fun QrScannerScreen(company: String) {
-//        Column(
-//            modifier = Modifier.fillMaxSize().padding(16.dp),
-//            horizontalAlignment = Alignment.CenterHorizontally,
-//            verticalArrangement = Arrangement.Center
-//        ) {
-//            Text("Scanning QR Code for: $company", fontSize = 18.sp)
-//        }
-//    }
-//
-//    private fun hashQrContent(content: String): String {
-//        val digest = MessageDigest.getInstance("SHA-256")
-//        return digest.digest(content.toByteArray()).joinToString("") { "%02x".format(it) }
-//    }
-//
-//    private fun handleMaliciousHash(qrHash: String) {
-//        blockchainHelper.addHashToBlockchain(qrHash) { success ->
-//            println(if (success) "Hash added to blockchain successfully." else "Failed to add hash to blockchain.")
-//        }
-//    }
-//}
+    var requestUrl = url
+    var redirects = 0
+
+    Thread {
+        try {
+            while (redirects < maxRedirects) {
+                val request = Request.Builder().url(requestUrl).build()
+                val response = client.newCall(request).execute()
+
+                if (response.isRedirect) {
+                    requestUrl = response.header("Location") ?: break
+                    redirects++
+                } else {
+                    callback(requestUrl) // Final URL
+                    return@Thread
+                }
+            }
+            callback(null) // Too many redirects or failed
+        } catch (e: Exception) {
+            e.printStackTrace()
+            callback(null)
+        }
+    }.start()
+}

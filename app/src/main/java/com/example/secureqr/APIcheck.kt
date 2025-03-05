@@ -5,7 +5,7 @@ import okhttp3.Request
 import org.json.JSONObject
 
 fun checkDomainReputation(domain: String, callback: (String) -> Unit) {
-    println("inside checkDomainReputation")
+    println("domain: $domain")
     val client = OkHttpClient()
 //    val url = "https://api.threatintelligenceplatform.com/v1/reputation?apiKey=$apiKey&domain=$domain"
 //    val url =
