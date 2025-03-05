@@ -1,6 +1,5 @@
 package com.example.secureqr
 
-import android.util.Log
 import android.widget.Toast
 import org.web3j.crypto.Credentials
 import org.web3j.protocol.Web3j
@@ -13,9 +12,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.web3j.abi.datatypes.generated.Bytes32
+import org.web3j.crypto.RawTransaction
+import org.web3j.crypto.TransactionEncoder
 import org.web3j.protocol.core.DefaultBlockParameterName
 import org.web3j.utils.Convert
-import org.web3j.protocol.core.methods.response.EthGetBalance
 import org.web3j.protocol.core.methods.response.EthTransaction
 import org.web3j.protocol.core.methods.response.Transaction
 import org.web3j.tx.gas.ContractGasProvider
@@ -38,14 +38,6 @@ init {
         val credentials = Credentials.create(privateKey)
 
         System.out.println("BlockchainHelper: Connected to wallet address: ${credentials.address}")
-//        try {
-//            val walletAddress = credentials.address
-//            val balanceResponse: EthGetBalance = web3j.ethGetBalance(walletAddress, DefaultBlockParameterName.LATEST).send()
-//            val balanceInWei = balanceResponse.balance
-//            System.out.println("Balance: ${balanceInWei}")
-//        } catch (e : Exception) {
-//            System.out.println("Exception: ${e.message}")
-//        }
 
         val customGasProvider = object : ContractGasProvider {
             override fun getGasPrice(contractFunc: String?): BigInteger {
@@ -65,13 +57,11 @@ init {
     }
 
     fun checkIfHashExists(qrHash: String, callback: (Boolean) -> Unit) {
-//        System.out.println("Inside checkIfHashExists")
+
         Toast.makeText(context, "inside checkIfHashExists", Toast.LENGTH_SHORT).show()
         val contract = loadContractNormalScan()
         System.out.println("contracct : ${contract}")
         val hashBytes = qrHash.toByteArray()
-//        val hashBytes32 = ByteArray(32)
-//        System.arraycopy(hashBytes, 0, hashBytes32, 0, hashBytes.size.coerceAtMost(32)) // Copy hashBytes into hashBytes32
 
         val byteArray = Numeric.hexStringToByteArray("0x$qrHash")
 
@@ -86,66 +76,114 @@ init {
 
         Thread {
             try {
-//                addHashToBlockchain(qrHash) { success ->
-//                    if (success) {
-//                        System.out.println("Hash added to blockchain successfully.")
-//                    } else {
-//                        System.out.println("Failed to add hash to blockchain.")
-//                    }
-//                }
                 println("${hashBytes32.value}")
                 val isMalicious = contract.isHashMalicious(hashBytes32.value).send()
                 System.out.println("isMalicious: $isMalicious")
                 callback(isMalicious)
             } catch (e: Exception) {
                 System.out.println("Error checking hash: ${e.message}")
-//
                 callback(false)
             }
         }.start()
     }
 
 
-    fun addHashToBlockchain(qrHash: String, callback: (Boolean) -> Unit) {
-        val contract = loadContractNormalScan()
-        System.out.println("Before byte array: $qrHash")
-        val hashBytes = qrHash.toByteArray()
-        System.out.println("Before bytes array 32: ${hashBytes}")
-//        val hashBytes32 = ByteArray(32)
-//        System.arraycopy(hashBytes, 0, hashBytes32, 0, hashBytes.size.coerceAtMost(32))
-//        System.out.println("converted : ${Numeric.toHexString(hashBytes32)}")
+//    fun addHashToBlockchain(qrHash: String, callback: (Boolean) -> Unit) {
+//        val contract = loadContractNormalScan()
+//        System.out.println("Before byte array: $qrHash")
+//        val hashBytes = qrHash.toByteArray()
+//        System.out.println("Before bytes array 32: ${hashBytes}")
+////        val hashBytes32 = ByteArray(32)
+////        System.arraycopy(hashBytes, 0, hashBytes32, 0, hashBytes.size.coerceAtMost(32))
+////        System.out.println("converted : ${Numeric.toHexString(hashBytes32)}")
+//
+//        val byteArray = Numeric.hexStringToByteArray("0x$qrHash")
+//
+//        // Ensure the byte array is exactly 32 bytes
+//        require(byteArray.size == 32) { "Hash must be exactly 32 bytes!" }
+//
+//        // Create a Bytes32 object
+//        val hashBytes32 = Bytes32(byteArray)
+//
+//        // Print the readable hex string representation of the Bytes32
+//        println("HashBytes32 (Hex): ${Numeric.toHexString(hashBytes32.value)}")
+//        Thread {
+//                try {
+//                    System.out.println("qrHash: ${hashBytes32}")
+//                    val transactionReceipt = contract.addQRHash(hashBytes32.value).send()
+//                    System.out.println("transactionReceipt: ${transactionReceipt}")
+//                    getTransactionDetails(transactionReceipt.transactionHash)
+//                    val success = transactionReceipt.status == "0x1" // Status 0x1 means success
+//                    System.out.println("isSuccess: ${success}")
+////                    val credentials = Credentials.create(privateKey)
+////                    val walletAddress = credentials.address
+////                    val balanceResponse: EthGetBalance =
+////                        web3j.ethGetBalance(walletAddress, DefaultBlockParameterName.LATEST).send()
+////                    val balanceInWei = balanceResponse.balance
+////                    System.out.println("Balance: ${balanceInWei}")
+//                    callback(success) //replace true with success
+//                } catch (e: Exception) {
+//                    System.out.println("Error adding hash: ${e.message}")
+//                    callback(false)
+//                }
+//            }.start()
+//    }
+fun addHashToBlockchain(qrHash: String, callback: (Boolean) -> Unit) {
+    val contract = loadContractNormalScan()
+    val credentials = Credentials.create(privateKey)
+    val chainId: Long = 11155111 // Sepolia Testnet Chain ID
 
-        val byteArray = Numeric.hexStringToByteArray("0x$qrHash")
+    // Convert hash to Bytes32
+    val byteArray = Numeric.hexStringToByteArray("0x$qrHash")
+    require(byteArray.size == 32) { "Hash must be exactly 32 bytes!" }
+    val hashBytes32 = Bytes32(byteArray)
 
-        // Ensure the byte array is exactly 32 bytes
-        require(byteArray.size == 32) { "Hash must be exactly 32 bytes!" }
+    Thread {
+        try {
+            // Get nonce
+            val ethGetTransactionCount = web3j.ethGetTransactionCount(
+                credentials.address, DefaultBlockParameterName.LATEST
+            ).send()
+            val nonce = ethGetTransactionCount.transactionCount
 
-        // Create a Bytes32 object
-        val hashBytes32 = Bytes32(byteArray)
+            // Estimate gas
+            val gasPrice = web3j.ethGasPrice().send().gasPrice
+            val gasLimit = BigInteger.valueOf(200000)
 
-        // Print the readable hex string representation of the Bytes32
-        println("HashBytes32 (Hex): ${Numeric.toHexString(hashBytes32.value)}")
-        Thread {
-                try {
-                    System.out.println("qrHash: ${hashBytes32}")
-                    val transactionReceipt = contract.addQRHash(hashBytes32.value).send()
-                    System.out.println("transactionReceipt: ${transactionReceipt}")
-                    getTransactionDetails(transactionReceipt.transactionHash)
-                    val success = transactionReceipt.status == "0x1" // Status 0x1 means success
-                    System.out.println("isSuccess: ${success}")
-//                    val credentials = Credentials.create(privateKey)
-//                    val walletAddress = credentials.address
-//                    val balanceResponse: EthGetBalance =
-//                        web3j.ethGetBalance(walletAddress, DefaultBlockParameterName.LATEST).send()
-//                    val balanceInWei = balanceResponse.balance
-//                    System.out.println("Balance: ${balanceInWei}")
-                    callback(success) //replace true with success
-                } catch (e: Exception) {
-                    System.out.println("Error adding hash: ${e.message}")
-                    callback(false)
-                }
-            }.start()
-    }
+            // Encode function call
+            val function = contract.addQRHash(hashBytes32.value)
+            val encodedFunction = function.encodeFunctionCall()
+
+            // Create RawTransaction
+            val rawTransaction = RawTransaction.createTransaction(
+                nonce, gasPrice, gasLimit, contract.contractAddress, BigInteger.ZERO, encodedFunction
+            )
+
+            // Sign the transaction with the chain ID
+            val signedMessage = TransactionEncoder.signMessage(rawTransaction, chainId, credentials)
+            val hexValue = Numeric.toHexString(signedMessage)
+
+            // Send the signed transaction
+            val sendTransaction = web3j.ethSendRawTransaction(hexValue).send()
+
+            // Wait for transaction receipt
+            val transactionHash = sendTransaction.transactionHash
+            if (transactionHash == null) {
+                System.out.println("Failed to send transaction")
+                callback(false)
+                return@Thread
+            }
+    getTransactionDetails(transactionHash)
+            val transactionReceipt = web3j.ethGetTransactionReceipt(transactionHash).send().transactionReceipt
+        println("receipt  ${transactionReceipt}")
+            callback(true)
+        } catch (e: Exception) {
+            System.out.println("Error adding hash: ${e.message}")
+            callback(false)
+        }
+    }.start()
+}
+
 
 //   <------------------------------------------------BUSINESS SERVICE------------------------------------------------------------------------------------>
 
@@ -171,33 +209,91 @@ private fun loadContractBusinessScan(): SafeBusinessQR {
     return SafeBusinessQR.load(contractAddressBusinessQR, web3j, credentials, customGasProvider)
 }
 
-    fun addHashToBusinessServiceBlockchain(company: String, qrHash: String, callback: (Boolean) -> Unit) {
+//    fun addHashToBusinessServiceBlockchain(company: String, qrHash: String, callback: (Boolean) -> Unit) {
+//        val contract = loadContractBusinessScan()
+//        System.out.println("Before byte array in BusinessService: $qrHash")
+//        val byteArray = Numeric.hexStringToByteArray("0x$qrHash")
+//
+//        require(byteArray.size == 32) { "Hash must be exactly 32 bytes!" }
+//
+//        val hashBytes32 = Bytes32(byteArray)
+//
+//        println("HashBytes32 (Hex): ${Numeric.toHexString(hashBytes32.value)}")
+//        Thread {
+//            try {
+//                System.out.println("qrHash: $hashBytes32")
+//                val transactionReceipt = contract.registerProduct(company, hashBytes32.value).send()
+//                System.out.println("transactionReceipt: ${transactionReceipt}")
+//                getTransactionDetails(transactionReceipt.transactionHash)
+//                val success = transactionReceipt.status == "0x1" // Status 0x1 means success
+//                System.out.println("isSuccess: ${success}")
+//
+//                callback(success) //replace true with success
+//            } catch (e: Exception) {
+//                System.out.println("Error adding hash: ${e.message}")
+//                callback(false)
+//            }
+//        }.start()
+//    }
+
+    fun addHashToBusinessServiceBlockchain(company: String, qrHash: String, callback: (Boolean) -> Unit){
         val contract = loadContractBusinessScan()
-        System.out.println("Before byte array in BusinessService: $qrHash")
+        val credentials = Credentials.create(privateKey)
+        val chainId: Long = 11155111 // Sepolia Testnet Chain ID
+
+        // Convert hash to Bytes32
         val byteArray = Numeric.hexStringToByteArray("0x$qrHash")
-
         require(byteArray.size == 32) { "Hash must be exactly 32 bytes!" }
-
         val hashBytes32 = Bytes32(byteArray)
 
-        println("HashBytes32 (Hex): ${Numeric.toHexString(hashBytes32.value)}")
         Thread {
             try {
-                System.out.println("qrHash: $hashBytes32")
-                val transactionReceipt = contract.registerProduct(company, hashBytes32.value).send()
-                System.out.println("transactionReceipt: ${transactionReceipt}")
-                getTransactionDetails(transactionReceipt.transactionHash)
-                val success = transactionReceipt.status == "0x1" // Status 0x1 means success
-                System.out.println("isSuccess: ${success}")
+                // Get nonce
+                val ethGetTransactionCount = web3j.ethGetTransactionCount(
+                    credentials.address, DefaultBlockParameterName.LATEST
+                ).send()
+                val nonce = ethGetTransactionCount.transactionCount
 
-                callback(success) //replace true with success
+                // Estimate gas
+                val gasPrice = web3j.ethGasPrice().send().gasPrice
+                val gasLimit = BigInteger.valueOf(200000)
+
+                // Encode function call
+                val function = contract.registerProduct(company,hashBytes32.value)
+                val encodedFunction = function.encodeFunctionCall()
+
+                // Create RawTransaction
+                val rawTransaction = RawTransaction.createTransaction(
+                    nonce, gasPrice, gasLimit, contract.contractAddress, BigInteger.ZERO, encodedFunction
+                )
+
+                // Sign the transaction with the chain ID
+                val signedMessage = TransactionEncoder.signMessage(rawTransaction, chainId, credentials)
+                val hexValue = Numeric.toHexString(signedMessage)
+
+                // Send the signed transaction
+                val sendTransaction = web3j.ethSendRawTransaction(hexValue).send()
+
+                // Wait for transaction receipt
+                val transactionHash = sendTransaction.transactionHash
+                if (transactionHash == null) {
+                    System.out.println("Failed to send transaction")
+                    callback(false)
+                    return@Thread
+                }
+                getTransactionDetails(transactionHash)
+                val transactionReceipt = web3j.ethGetTransactionReceipt(transactionHash).send().transactionReceipt
+                println("receipt  ${transactionReceipt}")
+//            val success = transactionReceipt.status == "0x1" // Status 0x1 means success
+//            System.out.println("Transaction successful: $success")
+
+                callback(true)
             } catch (e: Exception) {
                 System.out.println("Error adding hash: ${e.message}")
                 callback(false)
             }
         }.start()
     }
-
     fun isProductAuthentic(company: String, qrHash: String, callback: (Boolean) -> Unit) {
         val contract = loadContractBusinessScan()
         System.out.println("Business contract in isProductAuth: ${contract.contractAddress}")
@@ -232,12 +328,6 @@ private fun loadContractBusinessScan(): SafeBusinessQR {
                 withContext(Dispatchers.Main) {
 
                     System.out.println("Connection to client version: $version")
-
-//                    val credentials = Credentials.create(privateKey)
-//                    val walletAddress = credentials.address
-//                    val balanceResponse: EthGetBalance = web3j.ethGetBalance(walletAddress, DefaultBlockParameterName.LATEST).send()
-//                    val balanceInWei = balanceResponse.balance
-//                    System.out.println("Balance: $balanceInWei")
 
                 }
             } catch (e: Exception) {
