@@ -32,7 +32,8 @@
             android:screenOrientation="portrait"
             android:theme="@style/zxing_CaptureTheme"
             tools:replace="screenOrientation" />
-
+        <activity android:name=".SandboxedWebViewActivity"
+            android:exported="false"/>
     </application>
 
 </manifest>
