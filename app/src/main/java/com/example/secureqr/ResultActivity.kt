@@ -19,7 +19,6 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.platform.LocalUriHandler
 import com.example.secureqr.ui.theme.SecureQrTheme
 
 class ResultActivity : ComponentActivity() {
@@ -37,52 +36,6 @@ class ResultActivity : ComponentActivity() {
         }
     }
 }
-
-//@Composable
-//fun ResultScreen(scannedContent: String, hashContent: String) {
-//    val uriHandler = LocalUriHandler.current
-//
-//
-//    val annotatedString = buildAnnotatedString {
-//        append("Scanned QR Content:\n\n")
-//        if (scannedContent.startsWith("http") || scannedContent.startsWith("www" )) {
-//            // Annotate URL
-//            pushStringAnnotation(tag = "URL", annotation = scannedContent)
-//            pushStyle(SpanStyle(color = Color.Blue, textDecoration = TextDecoration.Underline))
-//            append(scannedContent)
-//            pop()
-//            pop()
-//        } else {
-//            append(scannedContent)
-//        }
-//        append("\n\nSHA-256 HASHED CONTENT:\n\n")
-//        append(hashContent)
-//    }
-//
-//    Column(
-//        modifier = Modifier
-//            .fillMaxSize()
-//            .padding(16.dp),
-//        horizontalAlignment = Alignment.CenterHorizontally,
-//        verticalArrangement = Arrangement.Center
-//    ) {
-//        Text(
-//            text = "Scanned QR Content:",
-//            fontSize = 20.sp,
-//            modifier = Modifier.padding(bottom = 10.dp)
-//        )
-//
-//        Text(
-//            text = annotatedString,
-//            style = androidx.compose.ui.text.TextStyle(fontSize = 16.sp),
-//            modifier = Modifier.padding(8.dp)
-//                .clickable {
-//                    if (scannedContent.startsWith("http" ) || scannedContent.startsWith("www" )) {
-//                        uriHandler.openUri(scannedContent)
-//                    }
-//                }
-//        )
-//    }
 @Composable
 fun ResultScreen(scannedContent: String, hashContent: String) {
     val context = LocalContext.current
