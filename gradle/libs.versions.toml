@@ -15,6 +15,7 @@ navigationRuntimeAndroid = "2.9.0-alpha06"
 navigationRuntimeKtx = "2.8.7"
 navigationCompose = "2.8.7"
 appcompat = "1.7.0"
+retrofit = "2.9.0"
 
 [libraries]
 # AndroidX Libraries
@@ -43,6 +44,8 @@ androidx-navigation-runtime-android = { group = "androidx.navigation", name = "n
 androidx-navigation-runtime-ktx = { group = "androidx.navigation", name = "navigation-runtime-ktx", version.ref = "navigationRuntimeKtx" }
 androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
+retrofit = { module = "com.squareup.retrofit2:retrofit", version.ref = "retrofit" }
+converter-gson = { module = "com.squareup.retrofit2:converter-gson", version.ref = "retrofit" }
 
 [plugins]
 # Plugin versions for Android Application and Kotlin
