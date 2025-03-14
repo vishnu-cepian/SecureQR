@@ -11,6 +11,7 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Button
@@ -28,8 +29,16 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.compose.*
 import androidx.compose.material3.*
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import retrofit2.Call
@@ -40,95 +49,109 @@ class MainActivity : ComponentActivity() {
     private val blockchainHelper = BlockchainHelper(this)
     private var selectedCompany: String? = null
 
-    private val scanResultLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        if (result.resultCode == RESULT_OK) {
-            val data = result.data
+    private val scanResultLauncher =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            if (result.resultCode == RESULT_OK) {
+                val data = result.data
 
-            val scanResult = IntentIntegrator.parseActivityResult(result.resultCode, data)
+                val scanResult = IntentIntegrator.parseActivityResult(result.resultCode, data)
 
-            if (scanResult != null && scanResult.contents != null) {
-                Log.d("QRScan", "Scan result: ${scanResult.contents}")
-                val qrContent = scanResult.contents
-                val qrHash = hashQrContent(qrContent)
+                if (scanResult != null && scanResult.contents != null) {
+                    Log.d("QRScan", "Scan result: ${scanResult.contents}")
+                    val qrContent = scanResult.contents
+                    val qrHash = hashQrContent(qrContent)
 
-                Log.d("QRScan", "Original Content: $qrContent")
-                Log.d("QRScan", "SHA-256 Hash: $qrHash")
-                val company = selectedCompany
+                    Log.d("QRScan", "Original Content: $qrContent")
+                    Log.d("QRScan", "SHA-256 Hash: $qrHash")
+                    val company = selectedCompany
 
-                println("----- $selectedCompany -----------")
-                if (company != null) {
-                    println("------------INSIDE PRODUCT---------------")
-                    blockchainHelper.isProductAuthentic(company, qrHash) { isAuthentic ->
-                        runOnUiThread {
-                            if (isAuthentic) {
-                                println("Product is authentic for $company")
-                                Toast.makeText(this, "AUTHENTIC PRODUCT", Toast.LENGTH_SHORT).show()
-                            } else {
-                                Toast.makeText(this, "COUNTERFEIT PRODUCT", Toast.LENGTH_SHORT)
-                                    .show()
-                                println("Product is NoT authentic for $company")
-                            }
-                        }
-                    }
-                } else {
-                    blockchainHelper.checkIfHashExists(qrHash) { isMalicious ->
-                        if (isMalicious) {
-                            Handler(Looper.getMainLooper()).post {
-                                Toast.makeText(this, "MALICIOUS URL!!!", Toast.LENGTH_LONG).show()
-                            }
-                            println("This QR code is Malicious.")
-                        } else {
-                            getFinalRedirectedUrl(qrContent) { finalUrl ->
-                                val resolvedUrl = finalUrl ?: qrContent
-                                println(resolvedUrl)
-                                //  !!!! RUN API CHECK THEN ML CHECK THEN IF NOT SECURE SAVE TO BLOCKCHAIN !!
-
-                            checkDomainReputation(resolvedUrl) {result ->
-                                println(result)
-                                if (result.toIntOrNull() != 0) {
-                                    handleMaliciousHash(qrHash)
+                    println("----- $selectedCompany -----------")
+                    if (company != null) {
+                        println("------------INSIDE PRODUCT---------------")
+                        blockchainHelper.isProductAuthentic(company, qrHash) { isAuthentic ->
+                            runOnUiThread {
+                                if (isAuthentic) {
+                                    println("Product is authentic for $company")
+                                    Toast.makeText(this, "AUTHENTIC PRODUCT", Toast.LENGTH_SHORT)
+                                        .show()
                                 } else {
-                                    println("CNN-BiLSTM model invocated")
-                                    val benign = "benign"
-                                    deepLearningModelAPI(resolvedUrl) { predictedResult ->
-                                        if (predictedResult != null) {
-                                            if (predictedResult != benign) {
-                                                Handler(Looper.getMainLooper()).post {
-                                                    Toast.makeText(this, "CNN-BiLSTM model detected url as $predictedResult -> Adding to blockchain", Toast.LENGTH_LONG).show()
-                                                }
-                                                println("----CNN-BiLSTM model detected url as $predictedResult--------")
-                                                handleMaliciousHash(qrHash)
-                                            } else {
-                                                Handler(Looper.getMainLooper()).post {
-                                                    Toast.makeText(this, "The URL is safe (confirmed by DL model)", Toast.LENGTH_LONG).show()
-                                                }
-                                                println("The URL is safe (confirmed by DL model)")
-                                            }
-                                        } else {
-                                            println("Error in predicted result")
-                                        }
-                                    }
+                                    Toast.makeText(this, "COUNTERFEIT PRODUCT", Toast.LENGTH_SHORT)
+                                        .show()
+                                    println("Product is NoT authentic for $company")
                                 }
                             }
-                            println("This QR code is benign.")
+                        }
+                    } else {
+                        blockchainHelper.checkIfHashExists(qrHash) { isMalicious ->
+                            if (isMalicious) {
+                                Handler(Looper.getMainLooper()).post {
+                                    Toast.makeText(this, "MALICIOUS URL!!!", Toast.LENGTH_LONG)
+                                        .show()
+                                }
+                                println("This QR code is Malicious.")
+                            } else {
+                                getFinalRedirectedUrl(qrContent) { finalUrl ->
+                                    val resolvedUrl = finalUrl ?: qrContent
+                                    println(resolvedUrl)
+                                    //  !!!! RUN API CHECK THEN ML CHECK THEN IF NOT SECURE SAVE TO BLOCKCHAIN !!
+
+                                    checkDomainReputation(resolvedUrl) { result ->
+                                        println(result)
+                                        if (result.toIntOrNull() != 0) {
+                                            handleMaliciousHash(qrHash)
+                                        } else {
+                                            println("CNN-BiLSTM model invocated")
+                                            val benign = "benign"
+                                            deepLearningModelAPI(resolvedUrl) { predictedResult ->
+                                                if (predictedResult != null) {
+                                                    if (predictedResult != benign) {
+                                                        Handler(Looper.getMainLooper()).post {
+                                                            Toast.makeText(
+                                                                this,
+                                                                "CNN-BiLSTM model detected url as $predictedResult -> Adding to blockchain",
+                                                                Toast.LENGTH_LONG
+                                                            ).show()
+                                                        }
+                                                        println("----CNN-BiLSTM model detected url as $predictedResult--------")
+                                                        handleMaliciousHash(qrHash)
+                                                    } else {
+                                                        Handler(Looper.getMainLooper()).post {
+                                                            Toast.makeText(
+                                                                this,
+                                                                "The URL is safe (confirmed by DL model)",
+                                                                Toast.LENGTH_LONG
+                                                            ).show()
+                                                        }
+                                                        println("The URL is safe (confirmed by DL model)")
+                                                    }
+                                                } else {
+                                                    println("Error in predicted result")
+                                                }
+                                            }
+                                        }
+                                    }
+                                    println("This QR code is benign.")
+                                }
                             }
                         }
+
+                        // Handle the QR code content (sending to ResultActivity)
+                        val intent = Intent(this, ResultActivity::class.java)
+                        intent.putExtra(
+                            "SCANNED_RESULT",
+                            scanResult.contents
+                        ) // adds data to intent
+                        intent.putExtra("HASHED_CONTENT", qrHash)
+                        startActivity(intent)   //start resultActivity
                     }
-
-                    // Handle the QR code content (sending to ResultActivity)
-                    val intent = Intent(this, ResultActivity::class.java)
-                    intent.putExtra("SCANNED_RESULT", scanResult.contents) // adds data to intent
-                    intent.putExtra("HASHED_CONTENT", qrHash)
-                    startActivity(intent)   //start resultActivity
+                } else {
+                    Log.d("QRScan", "No scan result")
                 }
-            } else {
-                Log.d("QRScan", "No scan result")
-            }
 
-        } else {
-            println("QR scan was canceled.")
+            } else {
+                println("QR scan was canceled.")
+            }
         }
-    }
 
     private fun handleMaliciousHash(qrHash: String) {
         blockchainHelper.addHashToBlockchain(qrHash) { success ->
@@ -142,13 +165,13 @@ class MainActivity : ComponentActivity() {
 
 
     private val requestPermissionLauncher =
-            registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted: Boolean ->
-                if (isGranted) {
-                    startQRScanner()
-                } else {
-                    println("camera permission required")
-                }
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted: Boolean ->
+            if (isGranted) {
+                startQRScanner()
+            } else {
+                println("camera permission required")
             }
+        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -165,7 +188,11 @@ class MainActivity : ComponentActivity() {
         }
 
         if (shouldShowRequestPermissionRationale(Manifest.permission.CAMERA).not() &&
-            ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+            ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.CAMERA
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
             requestPermissionLauncher.launch(Manifest.permission.CAMERA)
         }
     }
@@ -191,32 +218,68 @@ class MainActivity : ComponentActivity() {
     @Composable
     fun MainContent(navController: NavController) {
         val activity = LocalContext.current as MainActivity
-        Column(
+
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(brush = Brush.verticalGradient(colors = listOf(Color(0xFF0F2027),Color(0xFF00000),Color(0xFF24243E))))
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+                .background(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(Color(0xFF0F2027), Color(0xFF00000), Color(0xFF24243E))
+                    )
+                )
         ) {
-            Text(text = "SecureQR : A Quantum Leap In Qr Code Security")
+            // Background Image
+            Image(
+                painter = painterResource(id = R.drawable.pic),  // Use your image here
+                contentDescription = "Cybersecurity Background",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
 
-            Spacer(modifier = Modifier.height(20.dp))
-            Button(onClick = {
-                if (ContextCompat.checkSelfPermission(activity, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
-                    activity.startQRScanner()
-                } else {
-                println("camera permission required")
-                }
-            }) {
-                Text(text = "Scan QR Code")
-            }
-
-            Button(
-                onClick = { navController.navigate("business_service") },
-                modifier = Modifier.padding(8.dp)
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
             ) {
-                Text(text = "Business Service")
+                Text(text = "SecureQR : A Quantum Leap In Qr Code Security",
+                    color = Color.Cyan,
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(16.dp),
+                    fontFamily = FontFamily.Serif,
+                    style = TextStyle(
+                        shadow = Shadow(
+                            color = Color.Black,
+                            offset = Offset(2f,2f),
+                            blurRadius = 4f
+                        )
+                    )
+                )
+
+                Spacer(modifier = Modifier.height(20.dp))
+                Button(onClick = {
+                    if (ContextCompat.checkSelfPermission(
+                            activity,
+                            Manifest.permission.CAMERA
+                        ) == PackageManager.PERMISSION_GRANTED
+                    ) {
+                        activity.startQRScanner()
+                    } else {
+                        println("camera permission required")
+                    }
+                }) {
+                    Text(text = "Scan QR Code")
+                }
+
+                Button(
+                    onClick = { navController.navigate("business_service") },
+                    modifier = Modifier.padding(8.dp)
+                ) {
+                    Text(text = "Business Service")
+                }
             }
         }
     }
