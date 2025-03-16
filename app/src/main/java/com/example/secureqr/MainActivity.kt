@@ -39,11 +39,18 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import com.google.gson.Gson
+import com.google.gson.JsonParser
+
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.ResponseBody
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
+import org.json.JSONObject
+
+
 class MainActivity : ComponentActivity() {
 
     private val blockchainHelper = BlockchainHelper(this)
@@ -68,17 +75,38 @@ class MainActivity : ComponentActivity() {
                     println("----- $selectedCompany -----------")
                     if (company != null) {
                         println("------------INSIDE PRODUCT---------------")
-                        blockchainHelper.isProductAuthentic(company, qrHash) { isAuthentic ->
-                            runOnUiThread {
-                                if (isAuthentic) {
-                                    println("Product is authentic for $company")
-                                    Toast.makeText(this, "AUTHENTIC PRODUCT", Toast.LENGTH_SHORT)
-                                        .show()
-                                } else {
-                                    Toast.makeText(this, "COUNTERFEIT PRODUCT", Toast.LENGTH_SHORT)
-                                        .show()
-                                    println("Product is NoT authentic for $company")
+                        val jsonObject = JSONObject(qrContent)
+                        val ipfsCID = jsonObject.getString("ipfsCID")
+                        val hash = jsonObject.getString("qrhash")
+
+                        val productHash = generateSHA256Hash(ipfsCID, hash)
+                        println("Generated QR Hash: $productHash")
+
+                        IPFSAPI(ipfsCID) { ipfsData ->
+                            if (ipfsData != null) {
+                                val productData = ipfsData.productData
+                                val hashIPFS = ipfsData.qrhash
+
+                                if (hash == hashIPFS) {
+                                    println("qrHash from IPFS is confirmed with qrHash from Scanned QR")
+
+                                    blockchainHelper.isProductAuthentic(company, productHash) { isAuthentic ->
+                                        runOnUiThread {
+                                            if (isAuthentic) {
+                                                println("Product is authentic for $company")
+                                                Toast.makeText(this, "AUTHENTIC PRODUCT", Toast.LENGTH_SHORT)
+                                                    .show()
+                                            } else {
+                                                Toast.makeText(this, "COUNTERFEIT PRODUCT", Toast.LENGTH_SHORT)
+                                                    .show()
+                                                println("Product is NoT authentic for $company")
+                                            }
+                                        }
+                                    }
                                 }
+
+                            } else {
+                                println("API fetch failed")
                             }
                         }
                     } else {
@@ -377,7 +405,19 @@ class MainActivity : ComponentActivity() {
         scanResultLauncher.launch(scanIntent)
     }
 
+    fun generateSHA256Hash(ipfsCID: String, hash: String): String {
+        // Creating a JSONObject with EXACTLY the same structure as Node.js
+        val jsonObject = JSONObject()
+        jsonObject.put("ipfsCID", ipfsCID)
+        jsonObject.put("qrhash", hash)
 
+        val jsonString = jsonObject.toString()
+
+        val bytes = jsonString.toByteArray()
+        val digest = MessageDigest.getInstance("SHA-256").digest(bytes)
+
+        return digest.joinToString("") { "%02x".format(it) }
+    }
 
     private fun hashQrContent(content: String): String {
         val bytes = content.toByteArray()
@@ -435,6 +475,35 @@ private fun deepLearningModelAPI(urlToSend: String, callback: (String?) -> Unit)
 
         override fun onFailure(call: Call<ApiResponse>, t: Throwable) {
             println(t.message)
+        }
+    })
+}
+
+private fun IPFSAPI(ipfsCID: String, callback: (IpfsResponse?) -> Unit) {
+    RetrofitClient.ipfsApi.getProductData(ipfsCID).enqueue(object : Callback<ResponseBody> {
+        override fun onResponse(call: Call<ResponseBody>, response: Response<ResponseBody>) {
+            if (response.isSuccessful) {
+                try {
+                    val jsonString = response.body()?.string()
+
+                    val parsedJson = JsonParser().parse(jsonString).asJsonPrimitive.asString
+
+                    val ipfsData = Gson().fromJson(parsedJson, IpfsResponse::class.java)
+
+                    callback(ipfsData)
+                } catch (e: Exception) {
+                    println(e.message)
+                    callback(null)
+                }
+            } else {
+                println(response.errorBody()?.string())
+                callback(null)
+            }
+        }
+
+        override fun onFailure(call: Call<ResponseBody>, t: Throwable) {
+            println(t.message)
+            callback(null)
         }
     })
 }
