@@ -28,7 +28,8 @@ init {
     private val web3j: Web3j = Web3j.build(HttpService("https://sepolia.infura.io/v3/3764887512834ed9b5b729eaba91ee42"))
     private val contractAddressNormalScan = "0xe469542Ca15A06D13597DA19a9EB15E3d97F8EF3"
     private val privateKey = "de849daa7b187f7ce7e15fa7d966211d66f6600e2f2756a3b15093871bdff76b"
-    private val contractAddressBusinessQR = "0x77Af94BebE805a20a29AFaC50483dE2364A2f6Fc"
+    private val contractAddressBusinessQR = "0xf2fFa5e82c2da4cC025A7478f68829C55167F751"
+//    private val contractAddressBusinessQR = "0x77Af94BebE805a20a29AFaC50483dE2364A2f6Fc"
 //    0x3d95E7390ecE6d062e5047fd82d33D285797Ef3E
 //    0xEfa9f16F650fC2a1e84B6c1fbca9ef799e2664Ad
 
