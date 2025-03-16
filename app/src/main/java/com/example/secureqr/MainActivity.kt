@@ -75,10 +75,12 @@ class MainActivity : ComponentActivity() {
                     println("----- $selectedCompany -----------")
                     if (company != null) {
                         println("------------INSIDE PRODUCT---------------")
+                        val intent = Intent(this, ProductResultActivity::class.java)
+
                         val jsonObject = JSONObject(qrContent)
                         val ipfsCID = jsonObject.getString("ipfsCID")
                         val hash = jsonObject.getString("qrhash")
-
+                        println(ipfsCID)
                         val productHash = generateSHA256Hash(ipfsCID, hash)
                         println("Generated QR Hash: $productHash")
 
@@ -86,7 +88,6 @@ class MainActivity : ComponentActivity() {
                             if (ipfsData != null) {
                                 val productData = ipfsData.productData
                                 val hashIPFS = ipfsData.qrhash
-
                                 if (hash == hashIPFS) {
                                     println("qrHash from IPFS is confirmed with qrHash from Scanned QR")
 
@@ -96,10 +97,18 @@ class MainActivity : ComponentActivity() {
                                                 println("Product is authentic for $company")
                                                 Toast.makeText(this, "AUTHENTIC PRODUCT", Toast.LENGTH_SHORT)
                                                     .show()
+                                                intent.putExtra("AUTHENTIC", true)
+                                                intent.putExtra("PRODUCT_NAME",productData.productName)
+                                                intent.putExtra("SERIAL_NUMBER",productData.serialNumber)
+                                                intent.putExtra("BATCH",productData.batch)
+                                                intent.putExtra("COMPANY_NAME",productData.companyName)
+                                                startActivity(intent)
                                             } else {
                                                 Toast.makeText(this, "COUNTERFEIT PRODUCT", Toast.LENGTH_SHORT)
                                                     .show()
                                                 println("Product is NoT authentic for $company")
+                                                intent.putExtra("AUTHENTIC",false)
+                                                startActivity(intent)
                                             }
                                         }
                                     }
@@ -107,6 +116,8 @@ class MainActivity : ComponentActivity() {
 
                             } else {
                                 println("API fetch failed")
+                                intent.putExtra("AUTHENTIC",false)
+                                startActivity(intent)
                             }
                         }
                     } else {
