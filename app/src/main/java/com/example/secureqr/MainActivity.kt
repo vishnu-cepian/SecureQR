@@ -7,6 +7,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import android.util.Patterns
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -49,7 +50,8 @@ import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
 import org.json.JSONObject
-
+import android.net.Uri
+import android.provider.Settings
 
 class MainActivity : ComponentActivity() {
 
@@ -121,103 +123,172 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                     } else {
-                        blockchainHelper.checkIfHashExists(qrHash) { isMalicious ->
-                            runOnUiThread {
-                                val intent = Intent(this, ResultActivity::class.java)
-                                intent.putExtra(
-                                    "SCANNED_RESULT",
-                                    scanResult.contents
-                                ) // adds data to intent
-                                intent.putExtra("HASHED_CONTENT", qrHash)
+                        when {
+                            Patterns.WEB_URL.matcher(qrContent).matches() -> {
 
-                                if (isMalicious) {
-                                    Handler(Looper.getMainLooper()).post {
-                                        Toast.makeText(this, "MALICIOUS URL!!!", Toast.LENGTH_LONG)
-                                            .show()
-                                    }
-                                    intent.putExtra("IS_MALICIOUS",true)
-                                    println("This QR code is Malicious.")
-                                    startActivity(intent)
-                                } else {
+                                blockchainHelper.checkIfHashExists(qrHash) { isMalicious ->
+                                    runOnUiThread {
+                                        val intent = Intent(this, ResultActivity::class.java)
+                                        intent.putExtra(
+                                            "SCANNED_RESULT",
+                                            scanResult.contents
+                                        ) // adds data to intent
+                                        intent.putExtra("HASHED_CONTENT", qrHash)
 
-                                    intent.putExtra("BLOCKCHAIN_VERIFIED", true)
+                                        if (isMalicious) {
+                                            Handler(Looper.getMainLooper()).post {
+                                                Toast.makeText(
+                                                    this,
+                                                    "MALICIOUS URL!!!",
+                                                    Toast.LENGTH_LONG
+                                                )
+                                                    .show()
+                                            }
+                                            intent.putExtra("IS_MALICIOUS", true)
+                                            println("This QR code is Malicious.")
+                                            startActivity(intent)
+                                        } else {
 
-                                    getFinalRedirectedUrl(qrContent) { finalUrl ->
-                                        val resolvedUrl = finalUrl ?: qrContent
-                                        println(resolvedUrl)
-                                        //  !!!! RUN API CHECK THEN ML CHECK THEN IF NOT SECURE SAVE TO BLOCKCHAIN !!
+                                            intent.putExtra("BLOCKCHAIN_VERIFIED", true)
 
-                                        checkDomainReputation(resolvedUrl) { result ->
-                                            println(result)
-                                            if (result.toIntOrNull()!! > 2) {
-                                                intent.putExtra("IS_MALICIOUS",true)
-                                                intent.putExtra("API_VERIFIED",0)  //malicious
-                                                blockchainHelper.addHashToBlockchain(qrHash) { success ->
-                                                    if (success) {
-                                                        println("Hash added to blockchain successfully.")
-                                                        intent.putExtra("BLOCKCHAIN_ADD_VERIFIED",0)    //success
-                                                        startActivity(intent)
-                                                    } else {
-                                                        intent.putExtra("BLOCKCHAIN_ADD_VERIFIED",1)    //failed
-                                                        println("Failed to add hash to blockchain.")
-                                                        startActivity(intent)
-                                                    }
-                                                }
-                                            } else {
-                                                if(result.toIntOrNull() == 0)
-                                                    intent.putExtra("API_VERIFIED", 1)  //safe
-                                                else
-                                                    intent.putExtra("API_VERIFIED",2)  //suspicious
+                                            getFinalRedirectedUrl(qrContent) { finalUrl ->
+                                                val resolvedUrl = finalUrl ?: qrContent
+                                                println(resolvedUrl)
+                                                //  !!!! RUN API CHECK THEN ML CHECK THEN IF NOT SECURE SAVE TO BLOCKCHAIN !!
 
-                                                println("CNN-BiLSTM model invocated")
-
-                                                val benign = "benign"
-
-                                                deepLearningModelAPI(resolvedUrl) { predictedResult ->
-                                                    if (predictedResult != null) {
-                                                        if (predictedResult != benign) {
-
-                                                            intent.putExtra("IS_MALICIOUS",true)
-                                                            intent.putExtra("AI_VERIFIED",1)    //Malicious
-                                                            Handler(Looper.getMainLooper()).post {
-                                                                Toast.makeText(
-                                                                    this,
-                                                                    "CNN-BiLSTM model detected url as $predictedResult -> Adding to blockchain",
-                                                                    Toast.LENGTH_LONG
-                                                                ).show()
+                                                checkDomainReputation(resolvedUrl) { result ->
+                                                    println(result)
+                                                    if (result.toIntOrNull()!! > 2) {
+                                                        intent.putExtra("IS_MALICIOUS", true)
+                                                        intent.putExtra(
+                                                            "API_VERIFIED",
+                                                            0
+                                                        )  //malicious
+                                                        blockchainHelper.addHashToBlockchain(qrHash) { success ->
+                                                            if (success) {
+                                                                println("Hash added to blockchain successfully.")
+                                                                intent.putExtra(
+                                                                    "BLOCKCHAIN_ADD_VERIFIED",
+                                                                    0
+                                                                )    //success
+                                                                startActivity(intent)
+                                                            } else {
+                                                                intent.putExtra(
+                                                                    "BLOCKCHAIN_ADD_VERIFIED",
+                                                                    1
+                                                                )    //failed
+                                                                println("Failed to add hash to blockchain.")
+                                                                startActivity(intent)
                                                             }
-                                                            println("----CNN-BiLSTM model detected url as $predictedResult--------")
-                                                            blockchainHelper.addHashToBlockchain(qrHash) { success ->
-                                                                if (success) {
-                                                                    println("Hash added to blockchain successfully.")
-                                                                    intent.putExtra("BLOCKCHAIN_ADD_VERIFIED",0) //success
-                                                                    startActivity(intent)
-                                                                } else {
-                                                                    intent.putExtra("BLOCKCHAIN_ADD_VERIFIED",1) //failed
-                                                                    println("Failed to add hash to blockchain.")
-                                                                    startActivity(intent)
-                                                                }
-                                                            }
-                                                        } else {
-                                                            intent.putExtra("AI_VERIFIED",0)    //Safe
-                                                            Handler(Looper.getMainLooper()).post {
-                                                                Toast.makeText(
-                                                                    this,
-                                                                    "The URL is safe (confirmed by DL model)",
-                                                                    Toast.LENGTH_LONG
-                                                                ).show()
-                                                            }
-                                                            println("The URL is safe (confirmed by DL model)")
-                                                            startActivity(intent)
                                                         }
                                                     } else {
-                                                        println("Error in predicted result")
-                                                        startActivity(intent)   //----------------------------------------Code to be changed----------------------------
+                                                        if (result.toIntOrNull() == 0)
+                                                            intent.putExtra(
+                                                                "API_VERIFIED",
+                                                                1
+                                                            )  //safe
+                                                        else
+                                                            intent.putExtra(
+                                                                "API_VERIFIED",
+                                                                2
+                                                            )  //suspicious
+
+                                                        println("CNN-BiLSTM model invocated")
+
+                                                        val benign = "benign"
+
+                                                        deepLearningModelAPI(resolvedUrl) { predictedResult ->
+                                                            if (predictedResult != null) {
+                                                                if (predictedResult != benign) {
+
+                                                                    intent.putExtra(
+                                                                        "IS_MALICIOUS",
+                                                                        true
+                                                                    )
+                                                                    intent.putExtra(
+                                                                        "AI_VERIFIED",
+                                                                        1
+                                                                    )    //Malicious
+                                                                    Handler(Looper.getMainLooper()).post {
+                                                                        Toast.makeText(
+                                                                            this,
+                                                                            "CNN-BiLSTM model detected url as $predictedResult -> Adding to blockchain",
+                                                                            Toast.LENGTH_LONG
+                                                                        ).show()
+                                                                    }
+                                                                    println("----CNN-BiLSTM model detected url as $predictedResult--------")
+                                                                    blockchainHelper.addHashToBlockchain(
+                                                                        qrHash
+                                                                    ) { success ->
+                                                                        if (success) {
+                                                                            println("Hash added to blockchain successfully.")
+                                                                            intent.putExtra(
+                                                                                "BLOCKCHAIN_ADD_VERIFIED",
+                                                                                0
+                                                                            ) //success
+                                                                            startActivity(intent)
+                                                                        } else {
+                                                                            intent.putExtra(
+                                                                                "BLOCKCHAIN_ADD_VERIFIED",
+                                                                                1
+                                                                            ) //failed
+                                                                            println("Failed to add hash to blockchain.")
+                                                                            startActivity(intent)
+                                                                        }
+                                                                    }
+                                                                } else {
+                                                                    intent.putExtra(
+                                                                        "AI_VERIFIED",
+                                                                        0
+                                                                    )    //Safe
+                                                                    Handler(Looper.getMainLooper()).post {
+                                                                        Toast.makeText(
+                                                                            this,
+                                                                            "The URL is safe (confirmed by DL model)",
+                                                                            Toast.LENGTH_LONG
+                                                                        ).show()
+                                                                    }
+                                                                    println("The URL is safe (confirmed by DL model)")
+                                                                    startActivity(intent)
+                                                                }
+                                                            } else {
+                                                                println("Error in predicted result")
+                                                                startActivity(intent)   //----------------------------------------Code to be changed----------------------------
+                                                            }
+                                                        }
                                                     }
                                                 }
+                                                println("This QR code is benign.")
                                             }
                                         }
-                                        println("This QR code is benign.")
+                                    }
+                                }
+                            }
+
+                            else -> {
+                                when {
+                                    Patterns.PHONE.matcher(qrContent)
+                                        .matches() -> {
+                                            val intent = Intent(Intent.ACTION_DIAL)
+                                            intent.data = Uri.parse("tel:$qrContent")
+                                            startActivity(intent)
+                                    }
+
+                                    qrContent.contains("@") && Patterns.EMAIL_ADDRESS.matcher(qrContent)
+                                        .matches() -> {
+                                            val intent = Intent(Intent.ACTION_SENDTO)
+                                            intent.data = Uri.parse("mailto:$qrContent")
+                                            startActivity(intent)
+                                    }
+
+                                    qrContent.startsWith("WIFI:") -> {
+                                        val intent = Intent(Settings.ACTION_WIFI_SETTINGS)
+                                        startActivity(intent)
+                                    }
+                                    else -> {
+                                        val intent = Intent(this, ResultActivity::class.java)
+                                        intent.putExtra("IS_TEXT", scanResult.contents)
+                                        startActivity(intent)
                                     }
                                 }
                             }
@@ -486,6 +557,7 @@ private fun deepLearningModelAPI(urlToSend: String, callback: (String?) -> Unit)
 
         override fun onFailure(call: Call<ApiResponse>, t: Throwable) {
             println(t.message)
+            callback("benign") // FOR TESTING -------------------------------->
         }
     })
 }

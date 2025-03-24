@@ -34,6 +34,7 @@ class ResultActivity : ComponentActivity() {
         val isApiCheck = intent.getIntExtra("API_VERIFIED", 3)
         val isAiCheck = intent.getIntExtra("AI_VERIFIED", 2)
         val isBlockchainAdd = intent.getIntExtra("BLOCKCHAIN_ADD_VERIFIED", 2)
+        val isText = intent.getStringExtra("IS_TEXT") ?: "No Data"
 
         setContent {
             SecureQrTheme {
@@ -43,7 +44,7 @@ class ResultActivity : ComponentActivity() {
                 ) {
                     ResultScreen(
                         scannedContent, isMalicious,
-                        isBlockchainVerified, isApiCheck, isAiCheck, isBlockchainAdd
+                        isBlockchainVerified, isApiCheck, isAiCheck, isBlockchainAdd, isText
                     )
                 }
             }
@@ -58,138 +59,155 @@ fun ResultScreen(
     isBlockchainVerified: Boolean,
     isApiCheck: Int,
     isAiCheck: Int,
-    isBlockchainAdd: Int
+    isBlockchainAdd: Int,
+    isText: String
 ) {
     val context = LocalContext.current
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        // Main Heading
-        Text(
-            text = "Scan Results",
-            fontSize = 28.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(bottom = 16.dp)
-        )
-
-        // Safe or Malicious Status
-        val statusText = if (isMalicious) "MALICIOUS" else "SAFE"
-        val statusColor = if (isMalicious) listOf(Color.Red, Color(0xFFFF6B6B)) else listOf(Color.Green, Color(0xFF4CAF50))
-
-        Text(
-            text = statusText,
-            fontSize = 26.sp,
-            fontWeight = FontWeight.Bold,
+    if (isText == "No Data") {
+        Column(
             modifier = Modifier
-                .background(Brush.linearGradient(colors = statusColor), shape = RoundedCornerShape(8.dp))
-                .padding(horizontal = 20.dp, vertical = 8.dp),
-            color = Color.White
-        )
+                .fillMaxSize()
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            // Main Heading
+            Text(
+                text = "Scan Results",
+                fontSize = 28.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
 
-        Spacer(modifier = Modifier.height(20.dp))
+            // Safe or Malicious Status
+            val statusText = if (isMalicious) "MALICIOUS" else "SAFE"
+            val statusColor = if (isMalicious) listOf(Color.Red, Color(0xFFFF6B6B)) else listOf(Color.Green, Color(0xFF4CAF50))
 
-        // Parameter Checks Heading
-        Text(
-            text = "Parameters Checked",
-            fontSize = 22.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(bottom = 12.dp)
-        )
+            Text(
+                text = statusText,
+                fontSize = 26.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier
+                    .background(Brush.linearGradient(colors = statusColor), shape = RoundedCornerShape(8.dp))
+                    .padding(horizontal = 20.dp, vertical = 8.dp),
+                color = Color.White
+            )
 
-        // Parameters List
-        ParameterCheckBlockchain("Blockchain", isBlockchainVerified)
-        ParameterCheckAPI("API", isApiCheck)
-        ParameterCheckAI("AI MODEL", isAiCheck)
-        ParameterCheckBlockchainReg("Blockchain Registration", isBlockchainAdd)
+            Spacer(modifier = Modifier.height(20.dp))
 
-        Spacer(modifier = Modifier.height(20.dp))
+            // Parameter Checks Heading
+            Text(
+                text = "Parameters Checked",
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(bottom = 12.dp)
+            )
 
-        // QR Content
-        Text(
-            text = "QR Code Data:",
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold
-        )
-        Spacer(modifier = Modifier.height(8.dp))
+            // Parameters List
+            ParameterCheckBlockchain("Blockchain", isBlockchainVerified)
+            ParameterCheckAPI("API", isApiCheck)
+            ParameterCheckAI("AI MODEL", isAiCheck)
+            ParameterCheckBlockchainReg("Blockchain Registration", isBlockchainAdd)
 
-        val annotatedString = buildAnnotatedString {
-            if (scannedContent.startsWith("http") || scannedContent.startsWith("www")) {
-                pushStringAnnotation(tag = "URL", annotation = scannedContent)
-                pushStyle(SpanStyle(color = Color.Blue, textDecoration = TextDecoration.Underline))
-                append(scannedContent)
-                pop()
-                pop()
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // QR Content
+            Text(
+                text = "QR Code Data:",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            val annotatedString = buildAnnotatedString {
+                if (scannedContent.startsWith("http") || scannedContent.startsWith("www")) {
+                    pushStringAnnotation(tag = "URL", annotation = scannedContent)
+                    pushStyle(SpanStyle(color = Color.Blue, textDecoration = TextDecoration.Underline))
+                    append(scannedContent)
+                    pop()
+                    pop()
+                } else {
+                    append(scannedContent)
+                }
+            }
+
+            Text(
+                text = annotatedString,
+                fontSize = 16.sp,
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .padding(8.dp)
+                    .clickable {
+                        if (scannedContent.startsWith("http") || scannedContent.startsWith("www")) {
+                            val intent = Intent(context, SandboxedWebViewActivity::class.java).apply {
+                                putExtra("URL", scannedContent)
+                            }
+                            context.startActivity(intent)
+                        }
+                    }
+            )
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // Buttons
+            if (isMalicious) {
+                Button(
+                    onClick = {
+                        val intent = Intent(context, SandboxedWebViewActivity::class.java).apply {
+                            putExtra("URL", scannedContent)
+                        }
+                        context.startActivity(intent)
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
+                    modifier = Modifier.padding(8.dp)
+                ) {
+                    Text(text = "Open in Secure Mode", color = Color.White)
+                }
             } else {
-                append(scannedContent)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    Button(
+                        onClick = {
+                            val intent = Intent(Intent.ACTION_VIEW).apply {
+                                data = android.net.Uri.parse(scannedContent)
+                            }
+                            context.startActivity(intent)
+                        },
+                        modifier = Modifier.padding(8.dp)
+                    ) {
+                        Text(text = "Open in Default Browser")
+                    }
+
+                    Button(
+                        onClick = {
+                            val intent = Intent(context, SandboxedWebViewActivity::class.java).apply {
+                                putExtra("URL", scannedContent)
+                            }
+                            context.startActivity(intent)
+                        },
+                        modifier = Modifier.padding(8.dp)
+                    ) {
+                        Text(text = "Open in Secure Web")
+                    }
+                }
             }
         }
-
-        Text(
-            text = annotatedString,
-            fontSize = 16.sp,
-            textAlign = TextAlign.Center,
+    } else {
+        Column(
             modifier = Modifier
-                .padding(8.dp)
-                .clickable {
-                    if (scannedContent.startsWith("http") || scannedContent.startsWith("www")) {
-                        val intent = Intent(context, SandboxedWebViewActivity::class.java).apply {
-                            putExtra("URL", scannedContent)
-                        }
-                        context.startActivity(intent)
-                    }
-                }
-        )
-
-        Spacer(modifier = Modifier.height(20.dp))
-
-        // Buttons
-        if (isMalicious) {
-            Button(
-                onClick = {
-                    val intent = Intent(context, SandboxedWebViewActivity::class.java).apply {
-                        putExtra("URL", scannedContent)
-                    }
-                    context.startActivity(intent)
-                },
-                colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
-                modifier = Modifier.padding(8.dp)
-            ) {
-                Text(text = "Open in Secure Mode", color = Color.White)
-            }
-        } else {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
-            ) {
-                Button(
-                    onClick = {
-                        val intent = Intent(Intent.ACTION_VIEW).apply {
-                            data = android.net.Uri.parse(scannedContent)
-                        }
-                        context.startActivity(intent)
-                    },
-                    modifier = Modifier.padding(8.dp)
-                ) {
-                    Text(text = "Open in Default Browser")
-                }
-
-                Button(
-                    onClick = {
-                        val intent = Intent(context, SandboxedWebViewActivity::class.java).apply {
-                            putExtra("URL", scannedContent)
-                        }
-                        context.startActivity(intent)
-                    },
-                    modifier = Modifier.padding(8.dp)
-                ) {
-                    Text(text = "Open in Secure Web")
-                }
-            }
+                .fillMaxSize()
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            // Main Heading
+            Text(
+                text = isText,
+                fontSize = 28.sp,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
         }
     }
 }
