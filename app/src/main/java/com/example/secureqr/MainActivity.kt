@@ -42,6 +42,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import com.google.gson.Gson
 import com.google.gson.JsonParser
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -52,6 +54,9 @@ import retrofit2.Response
 import org.json.JSONObject
 import android.net.Uri
 import android.provider.Settings
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
@@ -423,53 +428,91 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    @OptIn(ExperimentalMaterial3Api::class)
-    @Composable
-    fun BusinessServiceScreen(navController: NavController) {
-        val activity = LocalContext.current as MainActivity
-        val companies = listOf("LuxuryBrand", "TechCorp", "FoodChain")
+@Composable
+fun BusinessServiceScreen(navController: NavController) {
+    val activity = LocalContext.current as MainActivity
+    var companies by remember { mutableStateOf(emptyList<Company>()) }
+    var expanded by remember { mutableStateOf(false) }
+    var selectedCompany by remember { mutableStateOf("Select Company") }
+    var searchQuery by remember { mutableStateOf("") }
 
-        var expanded by remember { mutableStateOf(false) }
-        var selectedCompany by remember { mutableStateOf(companies[0]) } // Default selection
 
-        Column(
-            modifier = Modifier.fillMaxSize().padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Text("Select a Company", fontSize = 20.sp, modifier = Modifier.padding(bottom = 16.dp))
-
-            Box(modifier = Modifier.wrapContentSize(Alignment.TopStart)) {
-                Button(onClick = { expanded = true }) {
-                    Text(selectedCompany)  // Show selected company name
+    LaunchedEffect(Unit) {
+        RetrofitClient.mongoApi.getCompanies().enqueue(object : Callback<List<Company>> {
+            override fun onResponse(call: Call<List<Company>>, response: Response<List<Company>>) {
+                if (response.isSuccessful) {
+                    companies = response.body() ?: emptyList()
+                } else {
+                    println("API Error: Response unsuccessful")
                 }
+            }
 
-                DropdownMenu(
-                    expanded = expanded,
-                    onDismissRequest = { expanded = false }
+            override fun onFailure(call: Call<List<Company>>, t: Throwable) {
+                println("API Error: ${t.message}")
+            }
+        })
+    }
+
+    val filteredCompanies = companies.filter {
+        it.name.contains(searchQuery, ignoreCase = true)
+    }
+
+    Column(
+        modifier = Modifier.fillMaxSize().padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text("Select a Company", fontSize = 20.sp, modifier = Modifier.padding(bottom = 16.dp))
+
+        Box(modifier = Modifier.wrapContentSize(Alignment.TopStart)) {
+            Button(onClick = { expanded = true }) {
+                Text(selectedCompany)
+            }
+
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+                modifier = Modifier.width(250.dp)
+            ) {
+                TextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    placeholder = { Text("Search Company") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(8.dp)
+                )
+
+                Column(
+                    modifier = Modifier
+                        .heightIn(max = 200.dp)
+                        .verticalScroll(rememberScrollState())
                 ) {
-                    companies.forEach { company ->
+                    filteredCompanies.forEach { company ->
                         DropdownMenuItem(
-                            text = { Text(company) },
+                            text = { Text(company.name) },
                             onClick = {
-                                selectedCompany = company
+                                selectedCompany = company.name
                                 expanded = false
                             }
                         )
                     }
                 }
             }
+        }
 
-            Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
-            Button(
-                onClick = { activity.startBusinessQRScanner(selectedCompany) },
-                modifier = Modifier.fillMaxWidth().padding(8.dp)
-            ) {
-                Text("Scan QR for $selectedCompany")
-            }
+        Button(
+            onClick = { activity.startBusinessQRScanner(selectedCompany) },
+            modifier = Modifier.fillMaxWidth().padding(8.dp)
+        ) {
+            Text("Scan QR for $selectedCompany")
         }
     }
+}
+
+
 
 
     private fun startBusinessQRScanner(company: String) {
@@ -557,7 +600,7 @@ private fun deepLearningModelAPI(urlToSend: String, callback: (String?) -> Unit)
 
         override fun onFailure(call: Call<ApiResponse>, t: Throwable) {
             println(t.message)
-            callback("benign") // FOR TESTING -------------------------------->
+            callback("benign") // <--------------------------------- FOR TESTING -------------------------------->
         }
     })
 }
