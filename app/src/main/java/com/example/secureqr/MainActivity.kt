@@ -1,6 +1,7 @@
 package com.example.secureqr
 
 import android.Manifest
+import android.app.ProgressDialog
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
@@ -57,6 +58,7 @@ import android.provider.Settings
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import kotlinx.coroutines.launch
+import org.json.JSONException
 
 class MainActivity : ComponentActivity() {
 
@@ -83,74 +85,86 @@ class MainActivity : ComponentActivity() {
                     if (company != null) {
                         println("------------INSIDE PRODUCT---------------")
                         val intent = Intent(this, ProductResultActivity::class.java)
+                        val progressDialog = ProgressDialog(this).apply {
+                            setMessage("Verifying Product Authenticity, please wait...")
+                            setCancelable(false)
+                            show()
+                        }
+                        try {
+                            val jsonObject = JSONObject(qrContent)
+                            val ipfsCID = jsonObject.getString("ipfsCID")
+                            val hash = jsonObject.getString("qrhash")
+                            println(ipfsCID)
 
-                        val jsonObject = JSONObject(qrContent)
-                        val ipfsCID = jsonObject.getString("ipfsCID")
-                        val hash = jsonObject.getString("qrhash")
-                        println(ipfsCID)
-                        val productHash = generateSHA256Hash(ipfsCID, hash)
-                        println("Generated QR Hash: $productHash")
+                            val productHash = generateSHA256Hash(ipfsCID, hash)
+                            println("Generated QR Hash: $productHash")
 
-                        IPFSAPI(ipfsCID) { ipfsData ->
-                            if (ipfsData != null) {
-                                val productData = ipfsData.productData
-                                val hashIPFS = ipfsData.qrhash
-                                if (hash == hashIPFS) {
-                                    println("qrHash from IPFS is confirmed with qrHash from Scanned QR")
+                            IPFSAPI(ipfsCID) { ipfsData ->
+                                if (ipfsData != null) {
+                                    val productData = ipfsData.productData
+                                    val hashIPFS = ipfsData.qrhash
+                                    if (hash == hashIPFS) {
+                                        println("qrHash from IPFS is confirmed with qrHash from Scanned QR")
 
-                                    blockchainHelper.isProductAuthentic(company, productHash) { isAuthentic ->
-                                        runOnUiThread {
-                                            if (isAuthentic) {
-                                                println("Product is authentic for $company")
-                                                Toast.makeText(this, "AUTHENTIC PRODUCT", Toast.LENGTH_SHORT)
-                                                    .show()
-                                                intent.putExtra("AUTHENTIC", true)
-                                                intent.putExtra("PRODUCT_NAME",productData.productName)
-                                                intent.putExtra("SERIAL_NUMBER",productData.serialNumber)
-                                                intent.putExtra("BATCH",productData.batch)
-                                                intent.putExtra("COMPANY_NAME",productData.companyName)
-                                                startActivity(intent)
-                                            } else {
-                                                Toast.makeText(this, "COUNTERFEIT PRODUCT", Toast.LENGTH_SHORT)
-                                                    .show()
-                                                println("Product is NoT authentic for $company")
-                                                intent.putExtra("AUTHENTIC",false)
-                                                startActivity(intent)
+                                        blockchainHelper.isProductAuthentic(company, productHash) { isAuthentic ->
+                                            runOnUiThread {
+                                                if (isAuthentic) {
+                                                    println("Product is authentic for $company")
+                                                    Toast.makeText(this, "AUTHENTIC PRODUCT", Toast.LENGTH_SHORT).show()
+                                                    intent.putExtra("AUTHENTIC", true)
+                                                    intent.putExtra("PRODUCT_NAME", productData.productName)
+                                                    intent.putExtra("SERIAL_NUMBER", productData.serialNumber)
+                                                    intent.putExtra("BATCH", productData.batch)
+                                                    intent.putExtra("COMPANY_NAME", productData.companyName)
+                                                    progressDialog.dismiss()
+                                                    startActivity(intent)
+                                                } else {
+                                                    Toast.makeText(this, "COUNTERFEIT PRODUCT", Toast.LENGTH_SHORT).show()
+                                                    println("Product is NoT authentic for $company")
+                                                    intent.putExtra("AUTHENTIC", false)
+                                                    progressDialog.dismiss()
+                                                    startActivity(intent)
+                                                }
                                             }
                                         }
                                     }
-                                }
 
-                            } else {
-                                println("API fetch failed")
-                                intent.putExtra("AUTHENTIC",false)
-                                startActivity(intent)
+                                } else {
+                                    println("API fetch failed")
+                                    intent.putExtra("AUTHENTIC", false)
+                                    progressDialog.dismiss()
+                                    startActivity(intent)
+                                }
                             }
-                        }
+                        } catch (e: JSONException) {
+                            val intent = Intent(this, ResultActivity::class.java)
+                            intent.putExtra("IS_TEXT", "⚠\uFE0F This QR code is not supported for product authentication.")
+                            progressDialog.dismiss()
+                            startActivity(intent)
+                    }
                     } else {
                         when {
                             Patterns.WEB_URL.matcher(qrContent).matches() -> {
 
+                                val progressDialog = ProgressDialog(this).apply {
+                                    setMessage("Scanning Qr Code, please wait...")
+                                    setCancelable(false)
+                                    show()
+                                }
+
                                 blockchainHelper.checkIfHashExists(qrHash) { isMalicious ->
                                     runOnUiThread {
                                         val intent = Intent(this, ResultActivity::class.java)
-                                        intent.putExtra(
-                                            "SCANNED_RESULT",
-                                            scanResult.contents
-                                        ) // adds data to intent
+                                        intent.putExtra("SCANNED_RESULT", scanResult.contents) // adds data to intent
                                         intent.putExtra("HASHED_CONTENT", qrHash)
 
                                         if (isMalicious) {
                                             Handler(Looper.getMainLooper()).post {
-                                                Toast.makeText(
-                                                    this,
-                                                    "MALICIOUS URL!!!",
-                                                    Toast.LENGTH_LONG
-                                                )
-                                                    .show()
+                                                Toast.makeText(this, "MALICIOUS URL!!!", Toast.LENGTH_LONG).show()
                                             }
                                             intent.putExtra("IS_MALICIOUS", true)
                                             println("This QR code is Malicious.")
+                                            progressDialog.dismiss()
                                             startActivity(intent)
                                         } else {
 
@@ -165,38 +179,25 @@ class MainActivity : ComponentActivity() {
                                                     println(result)
                                                     if (result.toIntOrNull()!! > 2) {
                                                         intent.putExtra("IS_MALICIOUS", true)
-                                                        intent.putExtra(
-                                                            "API_VERIFIED",
-                                                            0
-                                                        )  //malicious
+                                                        intent.putExtra("API_VERIFIED", 0)  //malicious
                                                         blockchainHelper.addHashToBlockchain(qrHash) { success ->
                                                             if (success) {
                                                                 println("Hash added to blockchain successfully.")
-                                                                intent.putExtra(
-                                                                    "BLOCKCHAIN_ADD_VERIFIED",
-                                                                    0
-                                                                )    //success
+                                                                intent.putExtra("BLOCKCHAIN_ADD_VERIFIED", 0)    //success
+                                                                progressDialog.dismiss()
                                                                 startActivity(intent)
                                                             } else {
-                                                                intent.putExtra(
-                                                                    "BLOCKCHAIN_ADD_VERIFIED",
-                                                                    1
-                                                                )    //failed
+                                                                intent.putExtra("BLOCKCHAIN_ADD_VERIFIED", 1)    //failed
                                                                 println("Failed to add hash to blockchain.")
+                                                                progressDialog.dismiss()
                                                                 startActivity(intent)
                                                             }
                                                         }
                                                     } else {
                                                         if (result.toIntOrNull() == 0)
-                                                            intent.putExtra(
-                                                                "API_VERIFIED",
-                                                                1
-                                                            )  //safe
+                                                            intent.putExtra("API_VERIFIED", 1)  //safe
                                                         else
-                                                            intent.putExtra(
-                                                                "API_VERIFIED",
-                                                                2
-                                                            )  //suspicious
+                                                            intent.putExtra("API_VERIFIED", 2)  //suspicious
 
                                                         println("CNN-BiLSTM model invocated")
 
@@ -205,59 +206,37 @@ class MainActivity : ComponentActivity() {
                                                         deepLearningModelAPI(resolvedUrl) { predictedResult ->
                                                             if (predictedResult != null) {
                                                                 if (predictedResult != benign) {
-
-                                                                    intent.putExtra(
-                                                                        "IS_MALICIOUS",
-                                                                        true
-                                                                    )
-                                                                    intent.putExtra(
-                                                                        "AI_VERIFIED",
-                                                                        1
-                                                                    )    //Malicious
+                                                                    intent.putExtra("IS_MALICIOUS", true)
+                                                                    intent.putExtra("AI_VERIFIED", 1)    //Malicious
                                                                     Handler(Looper.getMainLooper()).post {
-                                                                        Toast.makeText(
-                                                                            this,
-                                                                            "CNN-BiLSTM model detected url as $predictedResult -> Adding to blockchain",
-                                                                            Toast.LENGTH_LONG
-                                                                        ).show()
+                                                                        Toast.makeText(this, "CNN-BiLSTM model detected url as $predictedResult -> Adding to blockchain", Toast.LENGTH_LONG).show()
                                                                     }
                                                                     println("----CNN-BiLSTM model detected url as $predictedResult--------")
-                                                                    blockchainHelper.addHashToBlockchain(
-                                                                        qrHash
-                                                                    ) { success ->
+                                                                    blockchainHelper.addHashToBlockchain(qrHash) { success ->
                                                                         if (success) {
                                                                             println("Hash added to blockchain successfully.")
-                                                                            intent.putExtra(
-                                                                                "BLOCKCHAIN_ADD_VERIFIED",
-                                                                                0
-                                                                            ) //success
+                                                                            intent.putExtra("BLOCKCHAIN_ADD_VERIFIED", 0) //success
+                                                                            progressDialog.dismiss()
                                                                             startActivity(intent)
                                                                         } else {
-                                                                            intent.putExtra(
-                                                                                "BLOCKCHAIN_ADD_VERIFIED",
-                                                                                1
-                                                                            ) //failed
+                                                                            intent.putExtra("BLOCKCHAIN_ADD_VERIFIED", 1) //failed
                                                                             println("Failed to add hash to blockchain.")
+                                                                            progressDialog.dismiss()
                                                                             startActivity(intent)
                                                                         }
                                                                     }
                                                                 } else {
-                                                                    intent.putExtra(
-                                                                        "AI_VERIFIED",
-                                                                        0
-                                                                    )    //Safe
+                                                                    intent.putExtra("AI_VERIFIED", 0)    //Safe
                                                                     Handler(Looper.getMainLooper()).post {
-                                                                        Toast.makeText(
-                                                                            this,
-                                                                            "The URL is safe (confirmed by DL model)",
-                                                                            Toast.LENGTH_LONG
-                                                                        ).show()
+                                                                        Toast.makeText(this, "The URL is safe (confirmed by DL model)", Toast.LENGTH_LONG).show()
                                                                     }
                                                                     println("The URL is safe (confirmed by DL model)")
+                                                                    progressDialog.dismiss()
                                                                     startActivity(intent)
                                                                 }
                                                             } else {
                                                                 println("Error in predicted result")
+                                                                progressDialog.dismiss()
                                                                 startActivity(intent)   //----------------------------------------Code to be changed----------------------------
                                                             }
                                                         }
