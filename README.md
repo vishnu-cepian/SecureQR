@@ -135,7 +135,4 @@
 </p>
 
 
-## Contact
-For any queries, reach out at: **your.email@example.com**
-
 
