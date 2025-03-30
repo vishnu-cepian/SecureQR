@@ -5,6 +5,7 @@ contract SafeBusinessQR {
     mapping(string => mapping(bytes32 => bool)) public registeredProducts;
 
     function registerProduct(string memory company, bytes32 qrHash) public {
+        require(!registeredProducts[company][qrHash], "Product is already registered!");
         registeredProducts[company][qrHash] = true;
     }
 
