@@ -43,9 +43,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import com.google.gson.Gson
 import com.google.gson.JsonParser
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.ResponseBody
@@ -57,7 +54,6 @@ import android.net.Uri
 import android.provider.Settings
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import kotlinx.coroutines.launch
 import org.json.JSONException
 
 class MainActivity : ComponentActivity() {
@@ -155,7 +151,7 @@ class MainActivity : ComponentActivity() {
                                 blockchainHelper.checkIfHashExists(qrHash) { isMalicious ->
                                     runOnUiThread {
                                         val intent = Intent(this, ResultActivity::class.java)
-                                        intent.putExtra("SCANNED_RESULT", scanResult.contents) // adds data to intent
+                                        intent.putExtra("SCANNED_RESULT", scanResult.contents)
                                         intent.putExtra("HASHED_CONTENT", qrHash)
 
                                         if (isMalicious) {
@@ -173,7 +169,6 @@ class MainActivity : ComponentActivity() {
                                             getFinalRedirectedUrl(qrContent) { finalUrl ->
                                                 val resolvedUrl = finalUrl ?: qrContent
                                                 println(resolvedUrl)
-                                                //  !!!! RUN API CHECK THEN ML CHECK THEN IF NOT SECURE SAVE TO BLOCKCHAIN !!
 
                                                 checkDomainReputation(resolvedUrl) { result ->
                                                     println(result)
@@ -237,7 +232,9 @@ class MainActivity : ComponentActivity() {
                                                             } else {
                                                                 println("Error in predicted result")
                                                                 progressDialog.dismiss()
-                                                                startActivity(intent)   //----------------------------------------Code to be changed----------------------------
+                                                                Handler(Looper.getMainLooper()).post {
+                                                                    Toast.makeText(this, "MODEL FETCH ERROR", Toast.LENGTH_LONG).show()
+                                                                }
                                                             }
                                                         }
                                                     }
@@ -351,9 +348,8 @@ class MainActivity : ComponentActivity() {
                     )
                 )
         ) {
-            // Background Image
             Image(
-                painter = painterResource(id = R.drawable.pic),  // Use your image here
+                painter = painterResource(id = R.drawable.pic),
                 contentDescription = "Cybersecurity Background",
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()
@@ -441,7 +437,20 @@ fun BusinessServiceScreen(navController: NavController) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text("Select a Company", fontSize = 20.sp, modifier = Modifier.padding(bottom = 16.dp))
+        Text("Select a Company",
+            color = Color.White,
+            fontSize = 24.sp,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(16.dp),
+            fontFamily = FontFamily.Serif,
+            style = TextStyle(
+                shadow = Shadow(
+                    color = Color.Black,
+                    offset = Offset(2f,2f),
+                    blurRadius = 4f
+                )
+            ))
 
         Box(modifier = Modifier.wrapContentSize(Alignment.TopStart)) {
             Button(onClick = { expanded = true }) {
@@ -533,7 +542,7 @@ fun BusinessServiceScreen(navController: NavController) {
 
 fun getFinalRedirectedUrl(url: String, maxRedirects: Int = 5, callback: (String?) -> Unit) {
     val client = OkHttpClient.Builder()
-        .followRedirects(false) // Manually handle redirects
+        .followRedirects(false)
         .build()
 
     var requestUrl = url
@@ -574,12 +583,13 @@ private fun deepLearningModelAPI(urlToSend: String, callback: (String?) -> Unit)
                 callback(result)
             } else {
                 println("failed api")
+                callback(null)
             }
         }
 
         override fun onFailure(call: Call<ApiResponse>, t: Throwable) {
             println(t.message)
-            callback("benign") // <--------------------------------- FOR TESTING -------------------------------->
+            callback(null)
         }
     })
 }

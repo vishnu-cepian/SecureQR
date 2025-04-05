@@ -71,7 +71,6 @@ fun ResultScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // Main Heading
             Text(
                 text = "Scan Results",
                 fontSize = 28.sp,
@@ -79,7 +78,6 @@ fun ResultScreen(
                 modifier = Modifier.padding(bottom = 16.dp)
             )
 
-            // Safe or Malicious Status
             val statusText = if (isMalicious) "MALICIOUS" else "SAFE"
             val statusColor = if (isMalicious) listOf(Color.Red, Color(0xFFFF6B6B)) else listOf(Color.Green, Color(0xFF4CAF50))
 
@@ -95,7 +93,6 @@ fun ResultScreen(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Parameter Checks Heading
             Text(
                 text = "Parameters Checked",
                 fontSize = 22.sp,
@@ -103,7 +100,6 @@ fun ResultScreen(
                 modifier = Modifier.padding(bottom = 12.dp)
             )
 
-            // Parameters List
             ParameterCheckBlockchain("Blockchain", isBlockchainVerified)
             ParameterCheckAPI("API", isApiCheck)
             ParameterCheckAI("AI MODEL", isAiCheck)
@@ -111,7 +107,6 @@ fun ResultScreen(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // QR Content
             Text(
                 text = "QR Code Data:",
                 fontSize = 20.sp,
@@ -149,7 +144,6 @@ fun ResultScreen(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Buttons
             if (isMalicious) {
                 Button(
                     onClick = {
@@ -202,7 +196,6 @@ fun ResultScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // Main Heading
             Text(
                 text = isText,
                 fontSize = 28.sp,
@@ -212,7 +205,6 @@ fun ResultScreen(
     }
 }
 
-// Reusable Composable for Parameter Check
 @Composable
 fun ParameterCheckBlockchain(parameterName: String, isVerified: Boolean) {
     Row(

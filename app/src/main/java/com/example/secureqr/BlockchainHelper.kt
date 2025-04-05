@@ -73,13 +73,9 @@ init {
 
         val byteArray = Numeric.hexStringToByteArray("0x$qrHash")
 
-        // Ensure the byte array is exactly 32 bytes
         require(byteArray.size == 32) { "Hash must be exactly 32 bytes!" }
 
-        // Create a Bytes32 object
         val hashBytes32 = Bytes32(byteArray)
-
-        // Print the readable hex string representation of the Bytes32
         println("HashBytes32 (Hex): ${Numeric.toHexString(hashBytes32.value)}")
 
         Thread {
@@ -100,40 +96,32 @@ fun addHashToBlockchain(qrHash: String, callback: (Boolean) -> Unit) {
     val credentials = Credentials.create(privateKey)
     val chainId: Long = 11155111 // Sepolia Testnet Chain ID
 
-    // Convert hash to Bytes32
     val byteArray = Numeric.hexStringToByteArray("0x$qrHash")
     require(byteArray.size == 32) { "Hash must be exactly 32 bytes!" }
     val hashBytes32 = Bytes32(byteArray)
 
     Thread {
         try {
-            // Get nonce
             val ethGetTransactionCount = web3j.ethGetTransactionCount(
                 credentials.address, DefaultBlockParameterName.LATEST
             ).send()
             val nonce = ethGetTransactionCount.transactionCount
 
-            // Estimate gas
             val gasPrice = web3j.ethGasPrice().send().gasPrice
             val gasLimit = BigInteger.valueOf(200000)
 
-            // Encode function call
             val function = contract.addQRHash(hashBytes32.value)
             val encodedFunction = function.encodeFunctionCall()
 
-            // Create RawTransaction
             val rawTransaction = RawTransaction.createTransaction(
                 nonce, gasPrice, gasLimit, contract.contractAddress, BigInteger.ZERO, encodedFunction
             )
 
-            // Sign the transaction with the chain ID
             val signedMessage = TransactionEncoder.signMessage(rawTransaction, chainId, credentials)
             val hexValue = Numeric.toHexString(signedMessage)
 
-            // Send the signed transaction
             val sendTransaction = web3j.ethSendRawTransaction(hexValue).send()
 
-            // Wait for transaction receipt
             val transactionHash = sendTransaction.transactionHash
             if (transactionHash == null) {
                 println("Failed to send transaction")
@@ -190,40 +178,32 @@ private fun loadContractBusinessScan(): SafeBusinessQR {
         val credentials = Credentials.create(privateKey)
         val chainId: Long = 11155111 // Sepolia Testnet Chain ID
 
-        // Convert hash to Bytes32
         val byteArray = Numeric.hexStringToByteArray("0x$qrHash")
         require(byteArray.size == 32) { "Hash must be exactly 32 bytes!" }
         val hashBytes32 = Bytes32(byteArray)
 
         Thread {
             try {
-                // Get nonce
                 val ethGetTransactionCount = web3j.ethGetTransactionCount(
                     credentials.address, DefaultBlockParameterName.LATEST
                 ).send()
                 val nonce = ethGetTransactionCount.transactionCount
 
-                // Estimate gas
                 val gasPrice = web3j.ethGasPrice().send().gasPrice
                 val gasLimit = BigInteger.valueOf(200000)
 
-                // Encode function call
                 val function = contract.registerProduct(company,hashBytes32.value)
                 val encodedFunction = function.encodeFunctionCall()
 
-                // Create RawTransaction
                 val rawTransaction = RawTransaction.createTransaction(
                     nonce, gasPrice, gasLimit, contract.contractAddress, BigInteger.ZERO, encodedFunction
                 )
 
-                // Sign the transaction with the chain ID
                 val signedMessage = TransactionEncoder.signMessage(rawTransaction, chainId, credentials)
                 val hexValue = Numeric.toHexString(signedMessage)
 
-                // Send the signed transaction
                 val sendTransaction = web3j.ethSendRawTransaction(hexValue).send()
 
-                // Wait for transaction receipt
                 val transactionHash = sendTransaction.transactionHash
                 if (transactionHash == null) {
                     println("Failed to send transaction")
@@ -288,20 +268,17 @@ private fun loadContractBusinessScan(): SafeBusinessQR {
 
         Thread {
             try {
-                // Retrieve the transaction details using the transaction hash
                 val transaction: EthTransaction = web3j.ethGetTransactionByHash(transactionHash).send()
 
-                // Check if the transaction exists
                 if (transaction.result != null) {
                     val tx: Transaction = transaction.result
 
-                    // Print the details of the transaction
                     println("Transaction Hash: ${tx.hash}")
                     println("From: ${tx.from}")
                     println("To: ${tx.to}")
                     println("Value: ${tx.value}")
                     println("Gas: ${tx.gas}")
-                    println("Input Data: ${tx.input}") // This is the content of the transaction
+                    println("Input Data: ${tx.input}")
                 } else {
                     println("Transaction not found.")
                 }

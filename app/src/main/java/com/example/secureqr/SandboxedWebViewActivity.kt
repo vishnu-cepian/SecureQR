@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.example.secureqr.ui.theme.SecureQrTheme
 
@@ -24,7 +23,7 @@ class SandboxedWebViewActivity : ComponentActivity() {
     @SuppressLint("SetJavaScriptEnabled") // Enable JavaScript safely
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        WebView.setWebContentsDebuggingEnabled(true) // Helps with debugging crashes
+        WebView.setWebContentsDebuggingEnabled(true)
 
         val url = intent.getStringExtra("URL") ?: "https://www.google.com"
 
@@ -65,7 +64,7 @@ fun WebViewScreen(url: String, modifier: Modifier = Modifier) {
                     }
                 }
 
-                post { loadUrl(url) }  // Ensure WebView loads after being attached
+                post { loadUrl(url) }
             }
         },
         modifier = modifier.fillMaxSize()

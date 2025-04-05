@@ -10,23 +10,17 @@ import java.io.IOException
 fun checkDomainReputation( urlToScan: String,callback: (String) -> Unit) {
     val apiKey = "06795d20dfddda8774c9e80129c57f2d017eadcd542c226ec9b527ed1804bcec"
     val client = OkHttpClient()
-
-    // VirusTotal API URL for scanning
     val apiUrl = "https://www.virustotal.com/api/v3/urls"
-
-    // Request body (URL needs to be sent as "url" form data)
     val requestBody = FormBody.Builder()
         .add("url", urlToScan)
         .build()
 
-    // Build the request with API key
     val request = Request.Builder()
         .url(apiUrl)
         .post(requestBody)
-        .addHeader("x-apikey", apiKey) // Add API key in header
+        .addHeader("x-apikey", apiKey)
         .build()
 
-    // Execute the request asynchronously
     client.newCall(request).enqueue(object : Callback {
         override fun onFailure(call: Call, e: IOException) {
             println("Failed to connect: ${e.message}")
@@ -39,7 +33,6 @@ fun checkDomainReputation( urlToScan: String,callback: (String) -> Unit) {
                     return
                 }
 
-                // Parse response JSON
                 val responseBody = response.body?.string()
                 val json = JSONObject(responseBody ?: "{}")
 

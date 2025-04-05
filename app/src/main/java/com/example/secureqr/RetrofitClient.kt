@@ -4,9 +4,9 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
 object RetrofitClient {
-    private const val DL_BASE_URL = "http://192.168.37.96:5000"
+    private const val DL_BASE_URL = "http://192.168.179.96:4000"
     private const val IPFS_BASE_URL = "https://gateway.pinata.cloud/"
-    private const val DB_BASE_URL = "http://192.168.183.96:5000/api/"
+    private const val DB_BASE_URL = "http://192.168.179.96:5000/api/"
 
     val instance: ApiService by lazy {
         val retrofit = Retrofit.Builder()
