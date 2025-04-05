@@ -5,6 +5,7 @@
 - **MERN Stack (MongoDB, Express, React, Node js)**
 - **Blockchain** (Ethereum, Solidity, Web3j)
 - **IPFS**
+- **Python Flask**
 
 ---
 
